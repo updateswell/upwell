@@ -1,0 +1,105 @@
+---
+title: Hosting the policy
+description: Where to put policy.json, how caching works, and what happens when it can't be fetched.
+icon: Cloud
+---
+
+The policy is a static JSON file. Anything that serves HTTPS works.
+
+| Host | Notes |
+| --- | --- |
+| A CDN (CloudFront, Cloudflare, Fastly) | Set a short cache TTL (e.g. 60 s), so a change reaches devices quickly |
+| S3, R2, GCS bucket | Make the object public, or use `headers` for auth |
+| GitHub Pages / raw files | Easy to review policy changes in pull requests. Pages caches for about 10 minutes |
+| Your API | Return the JSON from any endpoint. You can generate it, e.g. from your release pipeline |
+| Firebase Remote Config, LaunchDarkly, … | Use a [custom source](/docs/guides/custom-sources-and-adapters) |
+
+## Fetching
+
+Pass a URL and Upwell uses `jsonUrl()` under the hood:
+
+```tsx
+<UpwellProvider policy="https://cdn.example.com/upwell/policy.json">
+```
+
+Or configure it:
+
+```tsx
+import { jsonUrl } from 'upwell';
+
+<UpwellProvider
+  policy={jsonUrl('https://api.example.com/upwell/policy', {
+    headers: { Authorization: `Bearer ${token}` },
+    cacheBust: true,
+  })}
+/>
+```
+
+| `jsonUrl` option | Default | |
+| --- | --- | --- |
+| `headers` | — | Extra request headers |
+| `cacheBust` | `false` | Appends `?_=<timestamp>` to skip CDN caches. Off by default because it breaks signed URLs |
+| `fetch` | global `fetch` | A custom fetch implementation |
+
+Requests always send `Cache-Control: no-cache`, so the HTTP cache on the device doesn't serve stale
+copies. They time out after `timeoutMs` (default 10 s).
+
+## Last known good
+
+Every valid policy is cached on the device. When a fetch fails (offline, timeout, HTTP error) or
+returns an invalid policy:
+
+1. Upwell uses the cached copy and decides normally.
+2. `state.policyError` holds the reason, and the trace says `using last known good`.
+3. Only when there's no cached copy either, *and* nothing else to do (such as an OTA update), is the
+   decision `error`.
+
+So a CDN outage never blocks your users, and a broken policy edit doesn't take effect.
+
+<Callout type="warn" title="A valid but wrong policy does take effect">
+  Validation catches typos and impossible values (like `minimum` above `latest`), but not a
+  `minimum` you raised by mistake. Review policy changes like code, and check them with
+  [simulation](/docs/guides/testing-and-simulation) or [`explain()`](/docs/reference/core#explain) first.
+</Callout>
+
+## Bundling a fallback
+
+To have a policy before the first fetch ever succeeds, bundle one and fall back to it:
+
+```ts
+import { jsonUrl, type PolicySource } from 'upwell';
+import bundled from './policy.json';
+
+const remote = jsonUrl('https://cdn.example.com/upwell/policy.json');
+
+const policy: PolicySource = {
+  async fetch(signal) {
+    try {
+      return await remote.fetch(signal);
+    } catch {
+      return bundled as never;
+    }
+  },
+};
+```
+
+Because the source then succeeds even when the network fails, the bundled copy wins over the
+cached one in that case. Keep it conservative, for example only a `minimum` you're sure about.
+
+## One file or many
+
+One file with an `android` and an `ios` section is the simplest. If you prefer separate files per
+platform or environment, pick the URL at runtime:
+
+```tsx
+const env = __DEV__ ? 'staging' : 'production';
+
+<UpwellProvider policy={`https://cdn.example.com/upwell/${env}/policy.json`} />;
+```
+
+## Release checklist
+
+1. Ship the new build to the store and wait until it's live (and rolled out, on Play).
+2. Update `latest` (with `releasedAt`) in the policy.
+3. Once the first OTA update for the new runtime is published, update `ota.latestRuntimeVersion`.
+4. Raise `minimum` only when you really need to block older builds.

@@ -1,0 +1,100 @@
+---
+title: Introduction
+description: Upwell decides, on every launch and foreground, what kind of update a React Native or Expo user needs, and drives it end to end.
+icon: Sparkles
+---
+
+Upwell is an **update orchestrator** for React Native and Expo. On every launch and every return to the
+foreground it works out which update this install needs: an over-the-air (OTA) JavaScript update, a new
+native build from the store, or nothing. Then it runs that update, from the first prompt to the restart.
+
+| Situation | What Upwell does |
+| --- | --- |
+| Native build below your `minimum` | **Required** update: Play's immediate flow on Android, a blocking screen and the App Store sheet on iOS |
+| An OTA update exists for this runtime | Downloads it in the background, then applies it on next launch, after a "Restart" prompt, or right away |
+| Native build too old for your newest OTA updates (**stranded**) | Recommends a store update, and requires it after N days |
+| A newer build is in the store | **Flexible** update on Android (background download, then "Restart to update"), the App Store sheet on iOS, with snoozes and frequency caps |
+| Nothing to do | Stays out of the way |
+
+You control all of this with one small JSON file, the [policy](/docs/policy), hosted wherever you like.
+
+<Callout title="Status: 0.1 (pre-release)" type="warn">
+  The API may still change before 1.0. Pin a minor version and read the [changelog](/docs/resources/changelog) when you upgrade.
+</Callout>
+
+## Why Upwell
+
+Most teams wire these pieces up by hand:
+
+- an OTA tool (expo-updates, hot-updater, …),
+- a wrapper for Play in-app updates,
+- an iTunes lookup for iOS,
+- a remote "minimum version" flag,
+- a custom force-update screen.
+
+The worst failure falls between those pieces. Each OTA update targets a **runtime version**, and a
+binary can only run updates for its own runtime. When you change native code and bump the runtime,
+installs that are still on the old binary **stop receiving OTA updates**. They stay on old JavaScript
+forever, and nothing prompts them to update. expo-updates doesn't detect this, and Expo's own advice is to build
+a version-check endpoint yourself.
+
+Upwell detects these [stranded installs](/docs/concepts/stranded-installs) and moves them to the store.
+It also covers the rest of the update story with one policy, one decision engine and one set of UI.
+
+## What's in the box
+
+<Cards>
+  <Card title="Decision engine" href="/docs/concepts/decision-engine">
+    A pure, table-tested `decide()` function. Every decision comes with a one-line reason and a full trace.
+  </Card>
+  <Card title="Native store flows" href="/docs/guides/android-play-updates">
+    Its own Play Core integration (flexible and immediate updates, progress, resuming interrupted updates), plus
+    the App Store sheet and lookup on iOS.
+  </Card>
+  <Card title="OTA integration" href="/docs/guides/ota-updates">
+    An expo-updates adapter that downloads in the background and applies updates per policy.
+  </Card>
+  <Card title="Headless React API" href="/docs/reference/react">
+    `useAppUpdate()` and `useUpdateHistory()` let you build your own UI on top of the engine.
+  </Card>
+  <Card title="UI kit" href="/docs/reference/ui">
+    A themeable prompt, progress banner, restart bar, force-update screen, "Updated" sheet and "What's new" list.
+  </Card>
+  <Card title="Transparent OTA" href="/docs/guides/transparent-ota">
+    Describe every OTA release to your users with a `releases.json` you publish next to the policy.
+  </Card>
+  <Card title="Simulation" href="/docs/guides/testing-and-simulation">
+    Step through every state in a dev build, or even in Expo Go, without Play internal app sharing or TestFlight.
+  </Card>
+  <Card title="Explainable" href="/docs/guides/debugging-and-analytics">
+    `explain()` tells you exactly why the engine decided what it did.
+  </Card>
+</Cards>
+
+## How it fits together
+
+<Mermaid
+  chart="
+flowchart LR
+  P[policy.json<br/>on your CDN] --> C
+  R[releases.json] -.-> C
+  D[Device<br/>version, build, install source] --> C
+  S[Store<br/>Play Core / App Store lookup] --> C
+  O[OTA tool<br/>expo-updates] --> C
+  C[UpwellController] --> E{{decide}}
+  E --> UI[useAppUpdate / UpwellUI]
+  UI -->|startUpdate| C
+"
+/>
+
+Upwell doesn't host OTA bundles or run a backend. You keep using expo-updates (or your own OTA tool
+through an [adapter](/docs/guides/custom-sources-and-adapters)), and you host two static JSON files.
+
+## Next steps
+
+<Cards>
+  <Card title="Installation" href="/docs/installation" />
+  <Card title="Quick start" href="/docs/quick-start" />
+  <Card title="How it works" href="/docs/concepts/how-it-works" />
+  <Card title="Policy reference" href="/docs/policy" />
+</Cards>

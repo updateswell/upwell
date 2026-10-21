@@ -1,0 +1,96 @@
+---
+title: OTA updates with expo-updates
+description: Download OTA updates in the background and apply them on next launch, after a prompt, or right away.
+icon: Zap
+---
+
+Upwell drives expo-updates through an [OTA adapter](/docs/reference/expo-updates). It checks for
+an update on every check, downloads it in the background, and applies it according to the policy's
+`ota.applyMode`.
+
+```tsx title="App.tsx"
+import { UpwellProvider } from 'upwell/react';
+import { expoUpdatesAdapter } from 'upwell/expo-updates';
+import { UpwellUI } from 'upwell/ui';
+
+export default function App() {
+  return (
+    <UpwellProvider policy="https://cdn.example.com/upwell/policy.json" ota={expoUpdatesAdapter()}>
+      <RootNavigator />
+      <UpwellUI />
+    </UpwellProvider>
+  );
+}
+```
+
+## Choosing an apply mode
+
+```json title="policy.json"
+{
+  "schemaVersion": 1,
+  "android": { "ota": { "applyMode": "nextLaunch" } },
+  "ios": { "ota": { "applyMode": "prompt" } }
+}
+```
+
+| Mode | What the user sees | Good for |
+| --- | --- | --- |
+| `nextLaunch` (default) | Nothing. expo-updates launches the downloaded update on the next cold start | Most updates |
+| `prompt` | `RestartSnackbar`: "A new version is ready. Restart to use it." If dismissed, it applies on next launch | Visible changes users should see soon |
+| `immediate` | The app restarts as soon as the download finishes | Critical fixes. It interrupts the user, so use it sparingly |
+
+Because the mode lives in the policy, you can switch to `immediate` for one urgent fix and back
+again, without a release.
+
+## Downloads
+
+- With `autoDownloadOta: true` (default), an available update starts downloading right after the check.
+- While it downloads, the decision is `ota.downloading`. The UI kit shows nothing for it.
+- A failed download is reported through `onError` and shows up as `ota: error` in the trace. The next
+  check tries again.
+
+To download only when you choose, turn auto-download off and call `check()` yourself, or drive the
+adapter directly:
+
+```tsx
+<UpwellProvider policy={url} ota={expoUpdatesAdapter()} autoDownloadOta={false}>
+```
+
+## Precedence over store updates
+
+A required store update always wins over OTA: an install below `minimum` is blocked even if an OTA
+update is waiting. A *recommended* store update waits while an OTA update is downloading or ready, so users
+aren't asked for two things at once. See [Precedence](/docs/concepts/decisions#precedence).
+
+## Development builds
+
+expo-updates is off in development, so the adapter reports `disabled` there and never checks. The
+runtime version is still read from your app config, so [stranded detection](/docs/concepts/stranded-installs)
+works in dev builds. To exercise the OTA states, use [simulation](/docs/guides/testing-and-simulation)
+(`simulate('ota.ready')`), or test a release build against a real EAS Update channel.
+
+```ts
+expoUpdatesAdapter({ checkInDev: true }); // only if your dev setup really serves updates
+```
+
+## Working with `checkAutomatically`
+
+If your app sets `updates.checkAutomatically` to `ON_LOAD` (the expo-updates default), expo-updates may
+already have fetched the update by the time Upwell checks. The download step then finishes almost
+at once. That's fine. If you want Upwell to be the only thing that checks, set it to `NEVER`:
+
+```json title="app.json"
+{
+  "expo": {
+    "updates": { "checkAutomatically": "NEVER" }
+  }
+}
+```
+
+With `NEVER`, the only way an update is fetched is through Upwell (or your own calls), and the
+"Restart" prompt and `immediate` mode work exactly as configured.
+
+## Other OTA tools
+
+Any OTA tool works through the `OtaAdapter` interface: hot-updater, revopush, or your own. See
+[Custom sources and adapters](/docs/guides/custom-sources-and-adapters#ota-adapters).

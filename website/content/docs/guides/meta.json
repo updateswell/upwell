@@ -1,0 +1,17 @@
+{
+  "title": "Guides",
+  "pages": [
+    "ota-updates",
+    "android-play-updates",
+    "ios-app-store",
+    "forced-updates",
+    "staged-rollout",
+    "transparent-ota",
+    "custom-ui",
+    "theming",
+    "testing-and-simulation",
+    "debugging-and-analytics",
+    "custom-sources-and-adapters",
+    "without-react"
+  ]
+}

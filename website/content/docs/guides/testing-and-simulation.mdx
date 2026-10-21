@@ -1,0 +1,132 @@
+---
+title: Testing and simulation
+description: Step through every update state in a dev build or Expo Go, and test your app's update logic in Jest.
+icon: FlaskConical
+---
+
+Testing in-app updates for real needs Play internal app sharing, TestFlight, and two builds. With
+simulation you can see every state in seconds, in a dev build or even in Expo Go.
+
+## simulate()
+
+```tsx
+const { simulate } = useAppUpdate();
+
+await simulate('store.downloading'); // jump to a state
+await simulate(null);                // back to the real device
+```
+
+| Scenario | What you get |
+| --- | --- |
+| `upToDate` | Installed build is the latest |
+| `store.recommended` | Newer build available. Tap "Update" to go through the download |
+| `store.downloading` | A flexible download in progress (Android) |
+| `store.readyToInstall` | A downloaded flexible update (Android) |
+| `store.required` | Installed build below `minimum` |
+| `stranded` | Runtime `3.3.0` while OTA updates target `3.4.0` |
+| `ota.downloading` | An OTA update downloading |
+| `ota.ready` | A downloaded OTA update, with `applyMode: "prompt"` |
+| `error` | No policy (simulated network error) |
+
+Simulation replaces the device, the store, the OTA tool and the policy with fakes, then runs the real
+controller and engine on them. Actions work too: "Update" downloads, "Restart" installs, "Later"
+snoozes. It uses in-memory storage, so it never touches real snoozes or cached policies.
+
+### Options
+
+```ts
+simulate('store.recommended', { platform: 'ios', stepMs: 200, userAccepts: false });
+```
+
+| Option | Default | |
+| --- | --- | --- |
+| `platform` | the device's | Pretend to be `'ios'` or `'android'`. Download states are Android-only |
+| `stepMs` | `400` | Delay between simulated steps (download progress ticks) |
+| `userAccepts` | `true` | Whether the simulated user accepts Play's dialog |
+| `nativePlay` | `true` when linked | Android: use Play's `FakeAppUpdateManager` (see below) |
+
+### The real Kotlin path
+
+On Android with the native module linked, `store.recommended` and `store.required` don't use the
+JavaScript fake. They configure Play's
+[`FakeAppUpdateManager`](https://developer.android.com/guide/playcore/in-app-updates/test#fake-app-update-manager)
+inside the native module, so the real Kotlin code runs: the accept dialog, download progress events
+and `completeUpdate()`. Pass `nativePlay: false` to use the JavaScript fake instead.
+
+## The dev menu
+
+`<UpwellDevMenu />` puts all of this on screen: a button per scenario, a "real device" button, and the
+live trace.
+
+```tsx
+import { UpwellDevMenu } from 'upwell/ui';
+
+export function DebugScreen() {
+  return <UpwellDevMenu style={{ flex: 1 }} />;
+}
+```
+
+Only render it in debug builds, or behind your own internal flag: anyone who can open it can change
+what the app shows.
+
+## Unit tests
+
+Pass a fake platform and a static policy, and assert on the decision. `createSimulation()` builds
+the fakes for a scenario:
+
+```tsx title="__tests__/updates.test.tsx"
+import { render, screen } from '@testing-library/react-native';
+import { Text } from 'react-native';
+import { createSimulation, staticSource } from 'upwell';
+import { UpwellProvider } from 'upwell/react';
+import { UpwellUI } from 'upwell/ui';
+
+test('blocks the app when an update is required', async () => {
+  const sim = await createSimulation('store.required', { platform: 'android', nativePlay: false });
+  await render(
+    <UpwellProvider platform={sim.platform} ota={sim.ota} policy={staticSource(sim.policy!)}>
+      <Text>Home</Text>
+      <UpwellUI />
+    </UpwellProvider>,
+  );
+  expect(await screen.findByTestId('upwell-force-update')).toBeTruthy();
+  sim.platform.dispose();
+});
+```
+
+The UI kit's components have stable `testID`s (`upwell-update-prompt`, `upwell-force-update`,
+`upwell-restart`, …), listed in the [UI kit reference](/docs/reference/ui#test-ids).
+
+For your own policies, test the engine directly. It's a pure function:
+
+```ts
+import { decide } from 'upwell';
+import policy from '../upwell/policy.json';
+
+test('build 290 must update', () => {
+  const decision = decide({
+    installed: {
+      platform: 'android',
+      appId: 'com.example',
+      nativeVersion: '2.9.0',
+      buildNumber: '290',
+      runtimeVersion: '2.9.0',
+      otaUpdateId: null,
+      installSource: 'play',
+      installationId: 'test',
+    },
+    policy: policy as never,
+    now: Date.parse('2026-10-21'),
+  });
+  expect(decision.kind).toBe('store.required');
+});
+```
+
+## On real devices
+
+Simulation covers Upwell's logic and native code paths, but before a big release it's still worth
+testing the real stores once:
+
+- **Android:** [internal app sharing](/docs/guides/android-play-updates#testing-on-a-real-device) with two builds.
+- **iOS:** TestFlight builds get store links, not the App Store sheet. To see the sheet, test against the
+  live App Store version with an older build installed from the App Store.

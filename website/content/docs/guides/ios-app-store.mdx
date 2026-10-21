@@ -1,0 +1,71 @@
+---
+title: iOS App Store updates
+description: The in-app App Store sheet, the App Store lookup, and how to configure staleness and storefronts on iOS.
+icon: Apple
+---
+
+iOS has no in-app update API like Play's. Upwell gets as close as the platform allows:
+
+- **Prompts** come from the policy, confirmed by the App Store lookup.
+- **Updating** opens the App Store product page inside your app (`SKStoreProductViewController`),
+  so users can tap "Update" without leaving it.
+- **Required updates** show `<ForceUpdateScreen />`, a modal that can't be dismissed, with an
+  "Update" button that opens the sheet.
+
+## Configure the policy
+
+```json title="policy.json"
+{
+  "schemaVersion": 1,
+  "ios": {
+    "appStoreId": "1234567890",
+    "latest": { "version": "3.4.0", "build": "1", "releasedAt": "2026-10-18" },
+    "minimum": { "version": "3.0.0", "build": "1" },
+    "recommendAfterDays": 2
+  }
+}
+```
+
+| Field | Why it matters on iOS |
+| --- | --- |
+| `appStoreId` | Needed for the in-app sheet. Find it in App Store Connect (App Information → Apple ID), or in your App Store URL (`id1234567890`) |
+| `latest.releasedAt` | iOS reports no staleness, so this is how `recommendAfterDays` and `requireAfterDays` work |
+| `country` | Only for region-restricted apps: the lookup only finds them in their own storefront. Defaults to the device region |
+
+## Version comparison
+
+iOS compares `CFBundleShortVersionString` first and `CFBundleVersion` second, so teams that reset
+the build number for every version (`3.4.0 (1)`, `3.5.0 (1)`) work out of the box. Put the build
+number you ship in `build`, even if it's always `"1"`.
+
+## The App Store lookup
+
+Upwell calls `https://itunes.apple.com/lookup` (by `appStoreId` when set, otherwise by bundle id) to
+learn the live version, its release date and its minimum iOS version.
+
+- **The lookup lags.** Apple's CDN can serve a stale answer for minutes to hours after a release. Upwell
+  adds a unique query string to skip cached answers, but the policy stays the source of truth: the lookup
+  only adds information, it never overrides `latest` or `minimum`.
+- **Minimum OS.** If the newest version needs a newer iOS than the device has, Upwell doesn't prompt,
+  because the user can't install it.
+- **No `latest` in the policy?** The lookup alone can still produce a recommendation when it reports a newer version.
+
+## TestFlight and development builds
+
+The in-app sheet is used only for App Store installs. TestFlight builds, development builds and the
+simulator get a store link instead, and the install source shows which one applied (`testFlight`,
+`sideload`, `unknown`). This keeps a TestFlight tester from being sent to the public App Store version
+by surprise.
+
+To try the flows on iOS without a release, use [simulation](/docs/guides/testing-and-simulation). It
+runs on iOS with a JavaScript fake of the store.
+
+## Opening the App Store yourself
+
+```ts
+const { openStore } = useAppUpdate();
+await openStore(); // the store link, regardless of the current decision
+```
+
+The config plugin adds `itms-apps` and `itms-beta` to `LSApplicationQueriesSchemes`, so
+`Linking.canOpenURL()` works for those URLs in your own code. Upwell itself doesn't need it.

@@ -1,0 +1,128 @@
+---
+title: Custom sources and adapters
+description: Load the policy from anywhere, plug in another OTA tool, or replace the device layer.
+icon: Plug
+---
+
+Upwell talks to the outside world through three small interfaces. Implement one to swap that piece.
+
+| Interface | Replaces | Built in |
+| --- | --- | --- |
+| `PolicySource` / `ReleasesSource` | Where `policy.json` / `releases.json` come from | `jsonUrl()`, `staticSource()` |
+| `OtaAdapter` | The OTA tool | `expoUpdatesAdapter()` |
+| `UpwellPlatform` | The device: installed info, store, storage | The native module, `SimulatedPlatform` |
+
+## Policy sources
+
+```ts
+interface Source<T> {
+  fetch(signal: AbortSignal): Promise<T>;
+}
+type PolicySource = Source<Policy>;
+type ReleasesSource = Source<ReleasesDocument>;
+```
+
+Whatever a source returns is validated, and a failed or invalid result falls back to the last
+valid copy. The `signal` aborts after `timeoutMs` (default 10 s).
+
+### Firebase Remote Config
+
+```ts
+import remoteConfig from '@react-native-firebase/remote-config';
+import type { PolicySource } from 'upwell';
+
+export const firebasePolicy: PolicySource = {
+  async fetch() {
+    await remoteConfig().fetchAndActivate();
+    return JSON.parse(remoteConfig().getValue('upwell_policy').asString());
+  },
+};
+```
+
+```tsx
+<UpwellProvider policy={firebasePolicy}>…</UpwellProvider>
+```
+
+### A bundled policy
+
+`staticSource(value)` always returns the same value. It's handy for tests, or for an app that only uses
+Upwell for OTA updates:
+
+```ts
+import { staticSource } from 'upwell';
+
+const policy = staticSource({ schemaVersion: 1, ios: { ota: { applyMode: 'prompt' } } } as const);
+```
+
+## OTA adapters
+
+```ts
+interface OtaAdapter {
+  readonly name: string;
+  getRuntime(): {
+    runtimeVersion: string | null;
+    updateId: string | null;   // null for the embedded bundle if the tool has no id for it
+    updateIds?: string[];      // every id the running update is known by, for releases.json
+    isEmbedded?: boolean;
+  };
+  check(): Promise<{ available: boolean; disabled?: boolean; reason?: string }>;
+  download(): Promise<void>;
+  apply(): Promise<void>;      // restart into the downloaded update
+}
+```
+
+A sketch for a hypothetical OTA SDK:
+
+```ts
+import type { OtaAdapter } from 'upwell';
+import * as Ota from 'my-ota-sdk';
+
+export function myOtaAdapter(): OtaAdapter {
+  return {
+    name: 'my-ota-sdk',
+    getRuntime: () => ({
+      runtimeVersion: Ota.getAppVersion(),
+      updateId: Ota.getCurrentBundleId(),
+    }),
+    async check() {
+      if (__DEV__) return { available: false, disabled: true, reason: 'development build' };
+      const update = await Ota.checkForUpdate();
+      return { available: update != null };
+    },
+    download: () => Ota.downloadUpdate(),
+    apply: () => Ota.reload(),
+  };
+}
+```
+
+Guidelines:
+
+- **`getRuntime()` is synchronous** and called on every check. Return what the running binary is
+  compatible with. That's what [stranded detection](/docs/concepts/stranded-installs) compares against
+  `latestRuntimeVersion`.
+- **Return `disabled: true`** where OTA is off (dev builds, not configured), so the trace says why.
+- **`apply()` usually never resolves**, because the JavaScript reloads. If it does resolve (tests,
+  simulation), Upwell checks again.
+
+Adapters for hot-updater and revopush are on the [roadmap](/docs/resources/roadmap). Contributions are welcome.
+
+## Platforms
+
+`UpwellPlatform` is everything the controller needs from the device:
+
+```ts
+interface UpwellPlatform {
+  readonly name: string;
+  readonly os: 'ios' | 'android';
+  readonly storage: KeyValueStorage; // synchronous get / set / remove
+  getInstalled(): Promise<BaseInstalledInfo>;
+  getStoreInfo(installed: BaseInstalledInfo, policy: PlatformPolicy | undefined): Promise<StoreInfo | null>;
+  startStoreUpdate(flow: StoreFlow, ctx: StoreFlowContext): Promise<StoreFlowResult>;
+  completeStoreUpdate(): Promise<void>;
+  onStoreProgress(listener: (progress: StoreProgress) => void): () => void;
+}
+```
+
+You rarely need your own. It's useful to support another store, or to run Upwell's controller in a
+non-React-Native environment. The default is `createNativePlatform()`. In Expo Go (no native module), the
+controller falls back to a platform that reports an `error` decision, and `simulate()` still works.

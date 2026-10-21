@@ -1,0 +1,54 @@
+---
+title: Roadmap
+description: What's shipped in 0.1, and what's planned next.
+icon: Map
+---
+
+## Shipped in 0.1
+
+- The decision engine (`decide()` / `explain()`), table-tested rule by rule
+- Policy and `releases.json` schemas, JSON Schema files, and runtime validation
+- Android: Play flexible and immediate updates, progress, `completeUpdate()`, resuming interrupted immediate
+  updates, install-source detection
+- iOS: App Store lookup, the in-app App Store sheet, App Store / TestFlight detection
+- The expo-updates adapter, with stranded-runtime detection
+- `UpwellProvider`, `useAppUpdate()`, `useUpdateHistory()`
+- The UI kit, with theming
+- Simulation (with Play's `FakeAppUpdateManager` on Android), and the dev menu
+- The config plugin
+
+## Next: 0.1 polish
+
+- Verification on real devices with Play internal app sharing and TestFlight
+- More recipes
+
+## Planned: CLI (`@upwell/cli`)
+
+- `validate`: check `policy.json` and `releases.json`
+- `publish-release`: append an entry to `releases.json`, wrapping or following `eas update`
+- `review-notes`: generate a ready-to-paste App Store Connect Review Notes section: that the app uses
+  OTA, what kinds of changes ship that way, the OTA history since the last reviewed build, and a link to
+  your public changelog
+- `kind: "feature"` warnings when publishing a feature OTA
+- An `ota.featuresRequireReview` policy flag: `feature` releases only apply to builds whose Review Notes
+  declared them; otherwise the engine recommends a store update
+
+## Planned: signed release log
+
+- `releases.json` as an append-only log, where each entry chains the previous entry's hash, signed with
+  a key whose public half is embedded in the binary by the config plugin
+- On-device verification: the bundle's hash must appear in a validly signed log, or the bundle is
+  refused
+- A generator for a public audit page
+
+This complements expo-updates code signing: signing proves *who* signed a bundle, while the log
+proves it was *publicly disclosed*.
+
+## Later
+
+- Adapters for hot-updater and revopush
+- A Firebase Remote Config policy source
+- A CLI command that sets Play's `inAppUpdatePriority` on release (Play Developer API)
+- Huawei AppGallery
+
+Have a use case that isn't covered? [Open an issue](https://github.com/updateswell/upwell/issues).

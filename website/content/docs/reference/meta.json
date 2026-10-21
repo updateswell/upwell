@@ -1,0 +1,4 @@
+{
+  "title": "API reference",
+  "pages": ["react", "ui", "controller", "expo-updates", "core", "types", "config-plugin"]
+}

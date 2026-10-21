@@ -1,0 +1,80 @@
+---
+title: Stranded installs
+description: Why installs stop receiving OTA updates after a native change, and how Upwell moves them to the store.
+icon: Anchor
+---
+
+## The problem
+
+Every OTA update targets a **runtime version**. A binary can only run updates built for its own
+runtime, because JavaScript built against different native code would crash. With expo-updates, the
+runtime usually comes from your app version or a fingerprint:
+
+```json title="app.json"
+{
+  "expo": {
+    "runtimeVersion": { "policy": "appVersion" }
+  }
+}
+```
+
+When you change native code, you ship a new binary with a new runtime, say `3.4.0`, and new OTA
+updates now target `3.4.0`. Installs still on the `3.3.0` binary:
+
+- don't receive any of the new OTA updates,
+- see no error and no prompt,
+- stay on the last `3.3.0` JavaScript until the user happens to update from the store.
+
+expo-updates can't tell them apart from installs that are simply up to date: from the binary's
+point of view, there's just no update for its runtime. These installs are **stranded**.
+
+## Detection
+
+Tell Upwell which runtime your newest OTA updates target:
+
+```json title="policy.json"
+{
+  "schemaVersion": 1,
+  "android": {
+    "latest": { "version": "3.4.0", "build": 340, "releasedAt": "2026-10-18" },
+    "ota": { "latestRuntimeVersion": "3.4.0", "strandedRequireAfterDays": 14 }
+  }
+}
+```
+
+An install is stranded when all three are true:
+
+1. `ota.latestRuntimeVersion` is set.
+2. The running runtime (from the OTA adapter) is different.
+3. A newer native build exists, from `latest`, Play, or the App Store lookup. If there's nothing to
+   move to, a store prompt wouldn't help.
+
+The expo-updates adapter reports the runtime even in debug builds (where updates are off) by falling
+back to the configured `runtimeVersion`, so you can test detection in development.
+
+## What happens
+
+| Stage | Decision |
+| --- | --- |
+| Stranded | `store.recommended` with `reason: "stranded"`. It ignores `rollout` and `recommendAfterDays`, but respects snoozes and caps |
+| Stranded and the new build is `strandedRequireAfterDays` old | `store.required` with `reason: "stranded"` |
+
+Use the `reason` to explain why the update matters:
+
+```tsx
+const { decision } = useAppUpdate();
+
+if (decision.kind === 'store.recommended' && decision.reason === 'stranded') {
+  return <Banner text="Your version no longer receives fixes. Please update." />;
+}
+```
+
+## Tips
+
+- **Bump `latestRuntimeVersion` when the first OTA update for the new runtime ships**, not before. Until
+  then, installs on the old runtime aren't missing anything.
+- **Leave `strandedRequireAfterDays` out** if you only want to nudge, and set it if old JavaScript is a
+  real problem (an API change, a security fix).
+- **Fingerprint runtimes** (`"policy": "fingerprint"`) work the same way: put the newest fingerprint in
+  `latestRuntimeVersion`.
+- Runtimes are compared by exact string match, not by version order.

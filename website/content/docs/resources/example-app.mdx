@@ -1,0 +1,38 @@
+---
+title: Example app
+description: Run the whole flow against the real native module, with policies built from what's installed.
+icon: AppWindow
+---
+
+The repository's [`example/`](https://github.com/updateswell/upwell/tree/main/example) app runs Upwell against
+the real native module and expo-updates. Its policy presets are built from the **installed** build and
+runtime, so you can watch every rule work on a real device:
+
+| Preset | What it shows |
+| --- | --- |
+| Up to date | `latest` equals the installed build |
+| Newer in store | A recommendation for the next version |
+| Stranded | `latestRuntimeVersion` bumped past the installed runtime |
+| Stranded 20 days | Stranded beyond `strandedRequireAfterDays` → required |
+| Below minimum | `minimum` above the installed build → required |
+
+It also includes the dev menu (simulation), `<WhatsNew />`, and the full UI kit with theming.
+
+## Run it
+
+```bash
+git clone https://github.com/updateswell/upwell.git
+cd upwell
+npm install && npm run build
+cd example && npm install
+npx expo run:android   # or: npx expo run:ios
+```
+
+Builds from `expo run:android` are sideloaded, so Play flows fall back to a store link. Use the dev menu's
+simulation to see the Play flows (it drives `FakeAppUpdateManager` in the native module), or install
+through Play internal app sharing.
+
+<Callout>
+  Metro may miss file changes in this setup when watchman isn't installed. Restart it with
+  `npx expo start --clear` after editing the library.
+</Callout>

@@ -1,0 +1,82 @@
+---
+title: Using Upwell without React
+description: Drive the controller directly, from a state manager, a navigation guard, or a background task.
+icon: Box
+---
+
+`upwell/react` is a thin wrapper around `UpwellController`. You can use the controller directly:
+
+```ts
+import { createUpwell } from 'upwell';
+import { expoUpdatesAdapter } from 'upwell/expo-updates';
+
+export const upwell = createUpwell({
+  policy: 'https://cdn.example.com/upwell/policy.json',
+  ota: expoUpdatesAdapter(),
+});
+
+upwell.subscribe((state) => {
+  console.log(state.decision.kind, state.decision.because);
+});
+
+await upwell.check({ force: true });
+```
+
+Without the provider, you run the lifecycle yourself:
+
+```ts
+import { AppState } from 'react-native';
+
+AppState.addEventListener('change', (next) => upwell.handleAppStateChange(next));
+```
+
+`handleAppStateChange('active')` checks (throttled by `minCheckIntervalMs`), and
+`handleAppStateChange('background')` installs a postponed flexible update.
+
+## Sharing a controller with React
+
+Create the controller once (for example in a module, or your store setup), and pass it to the provider.
+React components and your non-React code then share the same state:
+
+```tsx
+import { UpwellProvider } from 'upwell/react';
+import { upwell } from './upwell';
+
+<UpwellProvider controller={upwell}>
+  <App />
+</UpwellProvider>;
+```
+
+The provider reads its options once. Passing a controller is also how you change options later:
+create a new controller.
+
+## Zustand example
+
+```ts
+import { create } from 'zustand';
+import type { Decision } from 'upwell';
+import { upwell } from './upwell';
+
+export const useUpdateStore = create<{ decision: Decision }>(() => ({
+  decision: upwell.getState().decision,
+}));
+
+upwell.subscribe((state) => useUpdateStore.setState({ decision: state.decision }));
+```
+
+## Only the engine
+
+Need the decision without any of the machinery, for example on your server, to tell clients what to
+do? `decide()` is pure:
+
+```ts
+import { decide } from 'upwell';
+
+const decision = decide({
+  installed: { platform: 'android', appId, nativeVersion, buildNumber, runtimeVersion, otaUpdateId: null, installSource: 'play', installationId },
+  policy,
+  now: Date.now(),
+});
+```
+
+See the [Core API](/docs/reference/core) and the [controller reference](/docs/reference/controller).

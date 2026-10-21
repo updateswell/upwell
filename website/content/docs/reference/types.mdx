@@ -1,0 +1,165 @@
+---
+title: Types
+description: "The main TypeScript types: installed info, store info, decisions, releases and adapters."
+icon: Type
+---
+
+All types are exported from `upwell`:
+
+```ts
+import type { Decision, InstalledInfo, Policy, Release, StoreInfo } from 'upwell';
+```
+
+## InstalledInfo
+
+What's installed, read natively plus from the OTA adapter.
+
+```ts
+interface InstalledInfo {
+  platform: 'ios' | 'android';
+  appId: string;                 // package name / bundle identifier
+  nativeVersion: string;         // versionName / CFBundleShortVersionString, for display
+  buildNumber: string;           // versionCode / CFBundleVersion, for comparisons
+  runtimeVersion: string | null; // from the OTA adapter
+  otaUpdateId: string | null;
+  installSource: 'play' | 'appStore' | 'testFlight' | 'sideload' | 'unknown';
+  installationId: string;        // random per install, for rollout bucketing
+  osVersion?: string | null;
+}
+```
+
+## Policy
+
+```ts
+interface Policy {
+  schemaVersion: 1;
+  android?: PlatformPolicy;
+  ios?: IosPolicy; // PlatformPolicy & { appStoreId?: string; country?: string }
+}
+
+interface PlatformPolicy {
+  latest?: VersionRef;
+  minimum?: VersionRef;
+  recommendAfterDays?: number | null;
+  requireAfterDays?: number | null;
+  rollout?: number;
+  ota?: { latestRuntimeVersion?: string; applyMode?: ApplyMode; strandedRequireAfterDays?: number | null };
+  message?: PolicyMessage;
+  requiredMessage?: PolicyMessage;
+  storeUrl?: string;
+}
+
+interface VersionRef { version: string; build: number | string; releasedAt?: string }
+interface PolicyMessage { title?: string; body?: string; releaseNotesUrl?: string }
+type ApplyMode = 'nextLaunch' | 'prompt' | 'immediate';
+```
+
+See the [policy reference](/docs/policy).
+
+## StoreInfo
+
+```ts
+type StoreInfo = PlayStoreInfo | AppStoreInfo;
+
+interface PlayStoreInfo {
+  kind: 'play';
+  updateAvailability: 'unknown' | 'notAvailable' | 'available' | 'inProgress';
+  availableVersionCode: number | null;
+  updatePriority: number;          // 0–5
+  stalenessDays: number | null;
+  immediateAllowed: boolean;
+  flexibleAllowed: boolean;
+  installStatus: 'unknown' | 'pending' | 'downloading' | 'downloaded' | 'installing' | 'installed' | 'failed' | 'canceled';
+  bytesDownloaded: number;
+  totalBytesToDownload: number;
+}
+
+interface AppStoreInfo {
+  kind: 'appStore';
+  version: string | null;
+  releaseDate: string | null;
+  minimumOsVersion: string | null;
+  trackId: number | null;
+  trackViewUrl: string | null;
+}
+```
+
+## Decision
+
+```ts
+type Decision =
+  | { kind: 'upToDate'; snoozed?: { target: TargetVersion; until: number | null } }
+  | { kind: 'ota.downloading' }
+  | { kind: 'ota.ready'; applyMode: ApplyMode }
+  | ({ kind: 'store.recommended'; reason: 'newerVersion' | 'highPriority' | 'stranded' } & StorePrompt)
+  | {
+      kind: 'store.downloading';
+      progress: number | null;
+      bytesDownloaded: number;
+      totalBytesToDownload: number;
+      required: boolean;
+      target: TargetVersion;
+    }
+  | { kind: 'store.readyToInstall'; target: TargetVersion }
+  | ({ kind: 'store.required'; reason: 'belowMinimum' | 'stale' | 'stranded' } & StorePrompt)
+  | { kind: 'error'; reason: string; lastKnownGood: boolean };
+// every variant also has `because: string`
+
+interface StorePrompt {
+  flow: StoreFlow;
+  target: TargetVersion;
+  storeUrl: string | null;
+  message: PolicyMessage | null;
+}
+
+type StoreFlow = 'playImmediate' | 'playFlexible' | 'appStoreSheet' | 'storeLink';
+interface TargetVersion { version: string | null; build: string | null }
+type DecisionKind = Decision['kind'];
+```
+
+See [Decisions](/docs/concepts/decisions).
+
+## Releases
+
+```ts
+interface ReleasesDocument {
+  schemaVersion: 1;
+  releases: Release[];
+}
+
+interface Release {
+  id: string;
+  platforms: ('ios' | 'android')[];
+  runtimeVersion: string;
+  kind: 'fix' | 'content' | 'feature';
+  notes: string;
+  publishedAt: string;
+  bundleHash?: string;
+}
+```
+
+## Engine
+
+```ts
+interface EngineConfig {
+  snoozeHours: number;       // 24
+  maxPrompts: number;        // 3
+  promptPeriodHours: number; // 168
+}
+
+interface PromptHistory {
+  dismissedAt?: number;
+  dismissedTarget?: string;
+  shownAt?: number[];
+}
+```
+
+## Adapters and platforms
+
+`OtaAdapter`, `OtaRuntime`, `OtaCheckResult`, `UpwellPlatform`, `KeyValueStorage`, `BaseInstalledInfo`,
+`StoreFlowContext`, `StoreFlowResult` and `StoreProgress` are described in
+[Custom sources and adapters](/docs/guides/custom-sources-and-adapters).
+
+```ts
+type StoreFlowResult = 'accepted' | 'canceled' | 'failed' | 'notStarted' | 'dismissed' | 'opened';
+```

@@ -1,0 +1,125 @@
+---
+title: Controller
+description: createUpwell(), UpwellOptions, UpwellState and the UpwellController methods.
+icon: SlidersHorizontal
+---
+
+```ts
+import { createUpwell, UpwellController, type UpwellOptions, type UpwellState } from 'upwell';
+```
+
+The controller runs Upwell end to end. It reads the device, fetches the policy, asks the store and the
+OTA tool, runs `decide()`, and performs the resulting update. It doesn't depend on React;
+[`UpwellProvider`](/docs/reference/react#upwellprovider) wraps it.
+
+```ts
+const upwell = createUpwell({ policy: 'https://cdn.example.com/upwell/policy.json' });
+```
+
+## UpwellOptions
+
+<TypeTable
+  type={{
+    policy: {
+      type: 'PolicySource | string',
+      required: true,
+      description: 'Policy URL, or a source.',
+      typeDescriptionLink: '/docs/guides/custom-sources-and-adapters#policy-sources',
+    },
+    releases: {
+      type: 'ReleasesSource | string',
+      description: 'releases.json URL or source, for "What\'s new" and the "Updated" sheet.',
+    },
+    ota: {
+      type: 'OtaAdapter',
+      description: 'OTA tool adapter, e.g. expoUpdatesAdapter(). Without one, only store updates are handled.',
+    },
+    platform: {
+      type: 'UpwellPlatform | null',
+      default: 'the native module',
+      description: 'Device access. Pass a SimulatedPlatform in tests. null uses a platform that always fails.',
+    },
+    engine: {
+      type: 'Partial<EngineConfig>',
+      default: '{ snoozeHours: 24, maxPrompts: 3, promptPeriodHours: 168 }',
+      description: 'Snooze and prompt-cap settings.',
+      typeDescriptionLink: '/docs/concepts/decision-engine#engine-configuration',
+    },
+    minCheckIntervalMs: {
+      type: 'number',
+      default: '60000',
+      description: 'Minimum time between non-forced checks (foreground checks).',
+    },
+    timeoutMs: {
+      type: 'number',
+      default: '10000',
+      description: 'Network timeout for the policy and releases.',
+    },
+    autoDownloadOta: {
+      type: 'boolean',
+      default: 'true',
+      description: 'Download OTA updates as soon as they are found.',
+    },
+    debug: {
+      type: 'boolean',
+      default: 'false',
+      description: 'Log every decision\'s trace with console.log, and errors with console.warn.',
+    },
+    onDecision: {
+      type: '(explanation: { decision, trace }) => void',
+      description: 'Called every time the engine runs.',
+    },
+    onError: {
+      type: '(error: unknown, context: string) => void',
+      description: 'Called on errors other than policy fetches.',
+      typeDescriptionLink: '/docs/guides/debugging-and-analytics#error-contexts',
+    },
+    now: {
+      type: '() => number',
+      default: 'Date.now',
+      description: 'Clock, for tests.',
+    },
+  }}
+/>
+
+## Methods
+
+| Method | |
+| --- | --- |
+| `check(opts?)` | Re-evaluates everything. Concurrent calls share one run. Without `{ force: true }`, a check within `minCheckIntervalMs` of the last one returns the current decision |
+| `startUpdate()` | Does what the current decision calls for: the store flow, installing a downloaded update, or restarting into an OTA update |
+| `startStoreUpdate(flow?)` | Starts a store flow (default: the decision's flow). Falls back to the store link if a Play flow fails |
+| `completeStoreUpdate()` | Installs a downloaded flexible update. The app restarts |
+| `applyOta()` | Restarts into the downloaded OTA update |
+| `dismiss()` | "Later" for the current decision |
+| `markUpdateSeen()` | Clears `justUpdated` |
+| `explain()` | `{ decision, trace }` for the current decision |
+| `handleAppStateChange(next)` | Call with `AppState` changes when you don't use the provider. `'active'` checks; `'background'` installs a postponed flexible update |
+| `simulate(scenario, options?)` | Jumps to a [simulated state](/docs/guides/testing-and-simulation). `null` returns to the real device |
+| `getState()` | The current `UpwellState` |
+| `subscribe(listener)` | Calls `listener(state)` on every change. Returns an unsubscribe function |
+| `dispose()` | Stops listening to the store and drops all listeners |
+
+## UpwellState
+
+<TypeTable
+  type={{
+    status: { type: '"idle" | "checking" | "ready"', description: 'Whether a check has run, or is running.' },
+    decision: { type: 'Decision', description: 'The current decision.', typeDescriptionLink: '/docs/concepts/decisions' },
+    trace: { type: 'string[]', description: 'Why the engine decided what it did.' },
+    dismissed: { type: 'boolean', description: 'The user dismissed the current decision this session.' },
+    busy: { type: 'boolean', description: 'A store flow or an OTA restart is in progress.' },
+    installed: { type: 'InstalledInfo | null', description: 'What the device reported.' },
+    policy: { type: 'Policy | null', description: 'The policy in use (fresh, or last known good).' },
+    policyError: { type: 'string | null', description: 'Why the latest fetch failed or was rejected.' },
+    policyWarnings: { type: 'string[]', description: 'Validator warnings, e.g. unknown keys.' },
+    store: { type: 'StoreInfo | null', description: 'Play or App Store info.' },
+    ota: { type: '{ status, error? }', description: 'The OTA status: idle, checking, available, downloading, ready, upToDate, disabled or error.' },
+    releases: { type: 'ReleasesDocument | null', description: 'The releases.json in use.' },
+    currentRelease: { type: 'Release | null', description: 'The entry for the running OTA update.' },
+    history: { type: 'Release[]', description: 'Entries for the running runtime, newest first.' },
+    justUpdated: { type: 'Release | null', description: 'Set after an OTA update was applied, until markUpdateSeen().' },
+    lastCheckedAt: { type: 'number | null', description: 'Epoch ms of the last completed check.' },
+    simulation: { type: 'SimulationScenario | null', description: 'The active simulation scenario.' },
+  }}
+/>

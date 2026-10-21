@@ -1,0 +1,133 @@
+---
+title: Core API
+description: decide(), explain(), validators, version comparison, rollout, release helpers, sources and simulation.
+icon: Braces
+---
+
+Everything here is exported from `upwell`.
+
+## Engine
+
+### decide
+
+```ts
+function decide(input: DecisionInput): Decision;
+```
+
+The heart of the library: what kind of update does this install need right now? Pure and
+synchronous. See [Decision engine](/docs/concepts/decision-engine).
+
+### explain
+
+```ts
+function explain(input: DecisionInput): { decision: Decision; trace: string[] };
+```
+
+Same as `decide()`, plus every rule the engine evaluated.
+
+### DecisionInput
+
+<TypeTable
+  type={{
+    installed: { type: 'InstalledInfo', required: true, description: 'The device and the running runtime.', typeDescriptionLink: '/docs/reference/types#installedinfo' },
+    policy: { type: 'Policy | null', required: true, description: 'The fresh policy, or the last known good one when policyError is set.' },
+    policyError: { type: 'string | null', description: 'Set when the latest fetch failed or was invalid.' },
+    store: { type: 'StoreInfo | null', description: 'Play or App Store info.', typeDescriptionLink: '/docs/reference/types#storeinfo' },
+    ota: { type: '{ status, error? } | null', description: 'The OTA tool\'s status. null when there is no OTA adapter.' },
+    prompts: { type: 'PromptHistory', description: 'Dismissals and shown prompts, for snoozes and caps.' },
+    now: { type: 'number', required: true, description: 'Epoch ms.' },
+    config: { type: 'Partial<EngineConfig>', description: 'Snooze and cap settings.' },
+  }}
+/>
+
+### Helpers
+
+| Export | |
+| --- | --- |
+| `DEFAULT_ENGINE_CONFIG` | `{ snoozeHours: 24, maxPrompts: 3, promptPeriodHours: 168 }` |
+| `compareInstalled(installed, ref)` | `-1 \| 0 \| 1`, comparing an install to a policy version reference the way the engine does (Android: build; iOS: version, then build) |
+| `targetKey(target)` | The stable key snoozes are scoped to, e.g. `"build:340"` |
+
+## Validation
+
+```ts
+function validatePolicy(input: unknown): ValidationResult<Policy>;
+function validateReleases(input: unknown): ValidationResult<ReleasesDocument>;
+
+type ValidationResult<T> =
+  | { ok: true; value: T; warnings: string[] }
+  | { ok: false; errors: string[]; warnings: string[] };
+```
+
+Never throws. Messages include the path, e.g. `policy.android.rollout: must be a number from 0 to 100`.
+See [Validation](/docs/policy/validation).
+
+## Versions
+
+### compareVersions
+
+```ts
+function compareVersions(a: string | number, b: string | number): -1 | 0 | 1;
+
+compareVersions('1.10.0', '1.9.9'); // 1
+compareVersions(340, '300');        // 1
+compareVersions('1.2', '1.2.0');    // 0
+compareVersions('1.0.0-beta', '1.0.0'); // -1
+```
+
+Dotted numeric comparison: missing segments count as 0, a leading `v` and `+build` metadata are
+ignored, and pre-release tags sort before the release (semver rules).
+
+### isComparableVersion
+
+```ts
+function isComparableVersion(v: unknown): boolean;
+```
+
+Whether a value is something `compareVersions` can handle: a non-negative integer, or a string like `3.4.0`, `v2`, `1.0.0-rc.1`.
+
+## Rollout
+
+| Export | |
+| --- | --- |
+| `rolloutBucket(installationId, build)` | Stable 0–99 bucket for an install and a target build |
+| `isInRollout(installationId, build, rollout)` | `bucket < rollout`. `undefined` or ≥ 100 means everyone, ≤ 0 means no one |
+| `fnv1a(input)` | The 32-bit FNV-1a hash behind the buckets |
+
+## Releases
+
+| Export | |
+| --- | --- |
+| `findRelease(doc, { platform, updateIds })` | The entry whose `id` matches any of `updateIds` (case-insensitive) for this platform |
+| `releaseHistory(doc, { platform, runtimeVersion })` | Entries for this platform and runtime, newest first |
+
+## Sources
+
+| Export | |
+| --- | --- |
+| `jsonUrl(url, options?)` | Fetches JSON with `Cache-Control: no-cache`. Options: `headers`, `cacheBust`, `fetch`. See [Hosting](/docs/policy/hosting#fetching) |
+| `staticSource(value)` | Always returns `value` |
+| `PolicySource`, `ReleasesSource`, `Source<T>` | `{ fetch(signal: AbortSignal): Promise<T> }` |
+
+## Platform
+
+| Export | |
+| --- | --- |
+| `createNativePlatform()` | The device platform backed by the native module, or `null` when it isn't linked (Expo Go, web, tests) |
+| `getUpwellNative()` | The raw native module, or `null` |
+| `openStoreUrl(url, appId?)` | Opens a store URL. On Android, Play URLs go through `market://` |
+| `lookupAppStore(options)` | The iTunes lookup: `{ version, releaseDate, minimumOsVersion, trackId, trackViewUrl }` or `null` |
+| `appStoreLookupUrl(options)` | The lookup URL, with `country` and a cache-busting parameter |
+| `createMemoryStorage()` | An in-memory `KeyValueStorage` |
+
+`lookupAppStore` options: `bundleId` (required), `appStoreId`, `country`, `timeoutMs`, `fetch`, `now`.
+
+## Simulation
+
+| Export | |
+| --- | --- |
+| `createSimulation(scenario, options?)` | Builds `{ platform, ota, policy, policyError, releases }` fakes for a scenario. Call `platform.dispose()` when done |
+| `SIMULATION_SCENARIOS` | Every `SimulationScenario` |
+| `SimulatedPlatform`, `SimulatedOta` | The fake device/store and OTA tool |
+
+See [Testing and simulation](/docs/guides/testing-and-simulation).

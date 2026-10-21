@@ -1,0 +1,151 @@
+---
+title: Transparent OTA
+description: Describe every OTA release to your users with an in-app "Updated" sheet and "What's new" history.
+icon: Eye
+---
+
+OTA updates change your app without a store review. That's their whole point, and it's also why
+users and App Review can't see what changed. Transparent OTA closes that gap: you describe every
+OTA release in a [`releases.json`](/docs/policy/releases-json), and Upwell shows those notes in your app.
+
+## Why now
+
+Apple's App Review Guidelines (October 2026) added **2.5.19**: "Don't include any hidden, dormant, or
+undocumented features in your app; your app's functionality should be clear to end users and App Review."
+Hiding features is grounds for removing the app and terminating the developer account.
+
+- **2.5.2 (downloaded code) is unchanged.** OTA updates of interpreted JavaScript are still allowed, as
+  long as they don't change the app's primary purpose.
+- **2.3.1(a)** already asked for new features to be "described with specificity in the Notes for Review".
+- **The effect on OTA:** using OTA updates or feature flags to turn on unreviewed features after approval
+  is now explicitly an account-level risk. Teams that use OTA honestly want a way to show it.
+
+<Callout type="warn" title="Transparency tooling, not a compliance guarantee">
+  Upwell helps you show what you ship over the air. It can't guarantee that App Review accepts any
+  particular use of OTA updates, and this isn't legal advice. Upwell never behaves differently for App Review
+  (no region, account or device heuristics), and it never will. That's exactly the kind of behavior 2.5.19 bans.
+</Callout>
+
+## Workflow with EAS Update
+
+<Steps>
+<Step>
+
+### Publish the update
+
+```bash
+eas update --branch production --message "Fix checkout crash on iOS 27"
+```
+
+Note the **update group id** that EAS prints.
+
+</Step>
+<Step>
+
+### Describe it in releases.json
+
+Add an entry next to `policy.json`:
+
+```json title="releases.json"
+{
+  "schemaVersion": 1,
+  "releases": [
+    {
+      "id": "<update group id>",
+      "platforms": ["ios", "android"],
+      "runtimeVersion": "3.4.0",
+      "kind": "fix",
+      "notes": "Fixed a crash at checkout on iOS 27.",
+      "publishedAt": "2026-10-21T10:00:00Z"
+    }
+  ]
+}
+```
+
+Write the notes for users, and be specific: "Fixed a crash at checkout on iOS 27", not "Bug fixes".
+Use `kind: "feature"` honestly. New functionality belongs in a store submission whose Review Notes describe it.
+
+</Step>
+<Step>
+
+### Show it in the app
+
+Pass `releases` to the provider and render the UI kit:
+
+```tsx
+<UpwellProvider
+  policy="https://cdn.example.com/upwell/policy.json"
+  releases="https://cdn.example.com/upwell/releases.json"
+  ota={expoUpdatesAdapter()}
+>
+  <RootNavigator />
+  <UpwellUI /> {/* includes <UpdatedSheet /> */}
+</UpwellProvider>
+```
+
+Add a "What's new" screen, for example in settings:
+
+```tsx
+import { WhatsNew } from 'upwell/ui';
+
+export function WhatsNewScreen() {
+  return <WhatsNew style={{ flex: 1 }} />;
+}
+```
+
+</Step>
+<Step>
+
+### Describe your OTA practice to App Review
+
+When you submit a new binary, say in the Review Notes that the app uses expo-updates, which kinds of
+changes you ship that way, and where users can see them (your "What's new" screen, a public
+changelog). For example:
+
+```text
+This app uses expo-updates (runtime 3.4.0) to ship JavaScript bug fixes and content updates.
+New features are always submitted for review in a new binary. Every OTA release is listed
+in-app under Settings → What's new, and at https://example.com/changelog.
+```
+
+A CLI that generates this section from `releases.json` is on the [roadmap](/docs/resources/roadmap).
+
+</Step>
+</Steps>
+
+## What users see
+
+| Moment | UI |
+| --- | --- |
+| First launch after an OTA update was applied | `<UpdatedSheet />` with that release's notes, once |
+| Any time | `<WhatsNew />`: every release for the running runtime, newest first, with a kind badge |
+
+The sheet doesn't appear on a fresh install's first launch, or for updates without an entry in
+`releases.json`. Build your own UI with [`useUpdateHistory()`](/docs/reference/react#useupdatehistory).
+
+## Automating releases.json
+
+Until the CLI ships, a small script in your release pipeline can append the entry. A sketch with
+`eas update --json` and `jq` (check the JSON your eas-cli version prints, and set `runtimeVersion`
+and `kind` for your release):
+
+```bash
+GROUP=$(eas update --branch production --message "$MESSAGE" --json --non-interactive | jq -r '.[0].group')
+jq --arg id "$GROUP" --arg notes "$MESSAGE" --arg at "$(date -u +%FT%TZ)" \
+  '.releases = [{id: $id, platforms: ["ios","android"], runtimeVersion: "3.4.0", kind: "fix", notes: $notes, publishedAt: $at}] + .releases' \
+  releases.json > releases.next.json && mv releases.next.json releases.json
+```
+
+Commit `releases.json`, so its history doubles as your public OTA changelog.
+
+## What's next
+
+The roadmap adds:
+
+- **`@upwell/cli review-notes`:** a ready-to-paste Review Notes section from `releases.json`.
+- **`kind: "feature"` guardrails:** a warning when you publish a feature OTA, and an optional
+  `ota.featuresRequireReview` policy flag.
+- **A signed release log:** an append-only, hash-chained `releases.json` signed with a key embedded
+  in your binary. The device refuses OTA bundles that aren't in the log.
+
+See the [roadmap](/docs/resources/roadmap).

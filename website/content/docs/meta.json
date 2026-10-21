@@ -1,0 +1,19 @@
+{
+  "title": "Upwell",
+  "pages": [
+    "---Getting started---",
+    "index",
+    "installation",
+    "quick-start",
+    "---Concepts---",
+    "...concepts",
+    "---Policy---",
+    "...policy",
+    "---Guides---",
+    "...guides",
+    "---API reference---",
+    "...reference",
+    "---Resources---",
+    "...resources"
+  ]
+}

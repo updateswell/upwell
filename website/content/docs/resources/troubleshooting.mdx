@@ -1,0 +1,77 @@
+---
+title: Troubleshooting
+description: Fixes for the most common problems, from missing native modules to prompts that never show.
+icon: Wrench
+---
+
+Start with the trace: `explain()`, `debug: true`, or the [dev menu](/docs/reference/ui#upwelldevmenu)
+almost always tell you what's going on. See [Reading a trace](/docs/guides/debugging-and-analytics#reading-a-trace).
+
+## "The Upwell native module is not linked"
+
+```text
+error: The Upwell native module is not linked (Expo Go or web?). Use a development build, or simulate() to try the flows.
+```
+
+- **Expo Go** has no third-party native modules. Use a [development build](https://docs.expo.dev/develop/development-builds/introduction/),
+  or `simulate()` to try the flows in Expo Go.
+- **You installed Upwell but didn't rebuild.** Run `npx expo run:android` / `run:ios`, or start a new EAS build.
+- **Bare React Native:** make sure Expo modules are installed (`npx install-expo-modules`) and run `pod install`.
+
+## No prompt shows up
+
+Read the trace for one of these:
+
+| Trace line | Fix |
+| --- | --- |
+| `newer: installed … is at or above policy latest` | `latest` isn't above the installed build. On iOS, check both `version` and `build` |
+| `recommend: update is N days old, waiting for recommendAfterDays M` | Wait, or lower `recommendAfterDays` |
+| `staleness: unknown (set latest.releasedAt in the policy)` | Add `releasedAt`, especially on iOS |
+| `rollout: bucket N is outside X%` | Expected during a staged rollout |
+| `snoozed:` / `capped:` | The user tapped "Later", or hit the prompt cap. Clear app data to reset |
+| `store: Play has no update for this device yet` | Play hasn't rolled the build out to this device, or the build isn't live |
+| `ota: available` / `ready` | An OTA update takes precedence over a recommendation |
+
+## Play dialogs never appear on Android
+
+Play's in-app update API only works for apps **installed from Play**. Builds from `npx expo run:android`,
+`adb install` or EAS internal distribution are sideloaded, so Upwell uses a store link (`flow: installed from sideload…`
+or `installed from unknown`). Test with [internal app sharing](/docs/guides/android-play-updates#testing-on-a-real-device),
+or with simulation, which runs the real Kotlin path against `FakeAppUpdateManager`.
+
+## The App Store sheet doesn't open on iOS
+
+- `appStoreId` must be set in the policy (or found by the lookup).
+- The install must come from the App Store. TestFlight and development builds use a store link.
+- The simulator has no App Store. The sheet falls back to opening the App Store URL.
+
+## iOS keeps recommending an update that's already installed
+
+The App Store lookup can lag a release by hours, but the policy is the source of truth: check
+`ios.latest`. Remember that iOS compares the version *then* the build, so `3.4.0` build `"2"` is above
+`3.4.0` build `"1"`.
+
+## Policy changes don't take effect
+
+- Foreground checks are throttled to one a minute (`minCheckIntervalMs`).
+- Your CDN may be caching the file. Lower its TTL, or use `jsonUrl(url, { cacheBust: true })`.
+- An **invalid** policy is rejected, and the last valid copy keeps being used. Look for
+  `policy: latest fetch failed (invalid policy: …)` in the trace, or read `state.policyError`.
+
+## The "Updated" sheet never shows
+
+- Pass `releases` to the provider.
+- The entry's `id` must match the update id or the EAS update group id, and `platforms` must include this platform.
+- The sheet never shows on a fresh install's first launch, and it shows only once per update (until `markSeen()`).
+
+## Stranded detection doesn't trigger
+
+- `ota.latestRuntimeVersion` must be set for the platform, and must differ from the running runtime
+  (exact string match).
+- A newer native build must be known (`latest` above the installed build, or the store reports one).
+- The OTA adapter must report a runtime: the trace says `stranded: no OTA runtime reported` otherwise.
+
+## Still stuck?
+
+[Open an issue](https://github.com/updateswell/upwell/issues) with the trace from `explain()`, your
+policy (redact what you need to), the platform, and how the app was installed.

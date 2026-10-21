@@ -1,0 +1,110 @@
+---
+title: Installation
+description: Add Upwell to an Expo or bare React Native app.
+icon: Download
+---
+
+## Requirements
+
+| | |
+| --- | --- |
+| React Native | A version supported by your Expo SDK (the example app uses Expo SDK 58 and React Native 0.88) |
+| Expo | `expo` must be installed. Upwell is an [Expo module](https://docs.expo.dev/modules/overview/), so it works in bare React Native apps too |
+| iOS | 16.4 or later |
+| Android | Installs from Google Play for the in-app update flows; other installs fall back to a store link |
+| Build | A [development build](https://docs.expo.dev/develop/development-builds/introduction/) or a release build. Expo Go has no native module, so use [simulation](/docs/guides/testing-and-simulation) there |
+
+## Install the package
+
+<Steps>
+<Step>
+
+### Add Upwell
+
+```npm
+npx expo install upwell
+```
+
+</Step>
+<Step>
+
+### Add expo-updates (optional)
+
+If you ship OTA updates with expo-updates, install it too. Upwell uses it through
+[`upwell/expo-updates`](/docs/reference/expo-updates).
+
+```npm
+npx expo install expo-updates
+```
+
+`expo-updates` and `expo-constants` are optional peer dependencies. Without an OTA adapter, Upwell
+only handles store updates.
+
+</Step>
+<Step>
+
+### Add the config plugin (optional)
+
+Upwell works without the config plugin. Add it to pin the Play Core version or to declare the
+store URL schemes:
+
+```json title="app.json"
+{
+  "expo": {
+    "plugins": [["upwell", { "playAppUpdateVersion": "2.1.0" }]]
+  }
+}
+```
+
+See [Config plugin](/docs/reference/config-plugin) for every option.
+
+</Step>
+<Step>
+
+### Rebuild the native app
+
+Upwell adds native code, so rebuild your app after you install it:
+
+```bash
+npx expo prebuild   # only if you use Continuous Native Generation
+npx expo run:android
+npx expo run:ios
+```
+
+With EAS Build, start a new build (`eas build --profile development`). Because the native code
+changed, an OTA update can't add Upwell to builds that are already installed.
+
+</Step>
+</Steps>
+
+## Bare React Native
+
+In a bare React Native app, install `expo` first so Expo modules can be autolinked:
+
+```bash
+npx install-expo-modules@latest
+npm install upwell
+cd ios && pod install
+```
+
+There's no `app.json` plugin step in a bare app. To pin the Play Core version, set it in
+`android/gradle.properties`:
+
+```properties title="android/gradle.properties"
+upwellPlayAppUpdateVersion=2.1.0
+```
+
+## Entry points
+
+Upwell is one package with subpath exports, so you only load what you import:
+
+| Import | What it contains |
+| --- | --- |
+| `upwell` | The core engine (`decide`, `explain`, validators), `createUpwell`, sources, the native platform, simulation |
+| `upwell/react` | `UpwellProvider`, `useAppUpdate`, `useUpdateHistory`, `useUpwell`, `useUpwellState` |
+| `upwell/expo-updates` | `expoUpdatesAdapter()` |
+| `upwell/ui` | The UI kit and theming |
+| `upwell/schemas/*` | JSON Schemas for `policy.json` and `releases.json` |
+| `upwell/app.plugin.js` | The Expo config plugin |
+
+Next: [Quick start](/docs/quick-start).

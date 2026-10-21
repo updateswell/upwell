@@ -1,0 +1,97 @@
+---
+title: Store flows and install sources
+description: How Upwell picks between Play flexible, Play immediate, the App Store sheet and a plain store link.
+icon: Store
+---
+
+Every store decision (`store.recommended`, `store.required`) carries a `flow`. `startUpdate()` runs it.
+
+| Flow | Platform | What the user sees |
+| --- | --- | --- |
+| `playFlexible` | Android | Play's dialog, then a background download (`store.downloading`), then "Restart to update" (`store.readyToInstall`) |
+| `playImmediate` | Android | Play's full-screen update UI. The app restarts when it's done |
+| `appStoreSheet` | iOS | The App Store product page, in-app (`SKStoreProductViewController`) |
+| `storeLink` | Both | The store app or web page, opened through `Linking` |
+
+## Install source
+
+The native module detects where the binary came from:
+
+| `installSource` | Android | iOS |
+| --- | --- | --- |
+| `play` | Installer is the Play Store | |
+| `appStore` | | App Store build (no embedded provisioning profile, production receipt) |
+| `testFlight` | | TestFlight build (sandbox receipt) |
+| `sideload` | Another installer, or none | Development, ad hoc or enterprise signed |
+| `unknown` | Debuggable build | Simulator |
+
+## How the flow is chosen
+
+### Android
+
+<Mermaid
+  chart="
+flowchart TD
+  A{installSource = play?} -- no --> L[storeLink]
+  A -- yes --> B{Play reports an update?}
+  B -- no --> L
+  B -- yes --> C{required?}
+  C -- yes --> D{Play's version ≥ minimum?}
+  D -- no --> L
+  D -- yes --> E{immediate allowed?}
+  E -- yes --> I[playImmediate]
+  E -- no --> L
+  C -- no --> F{flexible allowed?}
+  F -- yes --> X[playFlexible]
+  F -- no --> L
+"
+/>
+
+Two safety checks are worth knowing:
+
+- **Play must actually offer the build.** If you raise `minimum` before the build is live in Play
+  (or before Play has rolled it out to this device), a required update falls back to the store link
+  instead of starting a Play flow that can't satisfy the minimum.
+- **Play is never asked about installs it didn't make.** Sideloaded and dev builds skip the Play API
+  entirely.
+
+If a Play flow fails or throws, Upwell falls back to the store link.
+
+### iOS
+
+- `appStoreSheet` when the install is from the App Store and an App Store id is known (`ios.appStoreId`
+  in the policy, or the `trackId` from the lookup).
+- `storeLink` otherwise: TestFlight, development builds, or no App Store id.
+
+If the sheet fails to load (offline, region restrictions), Upwell opens the App Store app instead.
+
+<Callout>
+  iOS has no equivalent of Play's in-app download. The App Store sheet lets users update without
+  leaving your app, but the update itself is installed by the system, and the app is relaunched
+  on the new build.
+</Callout>
+
+## Store URLs
+
+| Platform | Default |
+| --- | --- |
+| Android | `https://play.google.com/store/apps/details?id=<package>`, opened as `market://details?id=<package>` when the Play Store app is available |
+| iOS | `https://apps.apple.com/app/id<appStoreId>`, or the lookup's `trackViewUrl` |
+
+Override it per platform with `storeUrl` in the policy, for example to send Android users to another store.
+
+## Flow results
+
+`startUpdate()` and `startStoreUpdate()` resolve to one of:
+
+| Result | Meaning |
+| --- | --- |
+| `accepted` | The user accepted Play's dialog |
+| `canceled` | The user declined Play's dialog. For a recommendation, this counts as "Later" and snoozes it |
+| `failed` | The flow couldn't run (the store link fallback may have been tried) |
+| `notStarted` | Play didn't start the flow |
+| `dismissed` | The user closed the App Store sheet |
+| `opened` | A store link was opened |
+
+`opened` and `dismissed` don't mean the user actually updated. Upwell checks again when the app comes
+back to the foreground.

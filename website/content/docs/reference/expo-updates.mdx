@@ -1,0 +1,40 @@
+---
+title: upwell/expo-updates
+description: The OTA adapter for expo-updates.
+icon: RefreshCw
+---
+
+```ts
+import { expoUpdatesAdapter } from 'upwell/expo-updates';
+
+<UpwellProvider policy={url} ota={expoUpdatesAdapter()} />;
+```
+
+Requires `expo-updates` (and uses `expo-constants`, which Expo apps already have).
+
+## Options
+
+<TypeTable
+  type={{
+    checkInDev: {
+      type: 'boolean',
+      default: 'false',
+      description: 'Check for updates in development builds too. expo-updates is normally off there.',
+    },
+  }}
+/>
+
+## Behavior
+
+| Method | Uses |
+| --- | --- |
+| `getRuntime()` | `Updates.runtimeVersion`, falling back to the `runtimeVersion` in your app config (debug builds report an empty runtime). `Updates.updateId`, the EAS update group id from the manifest, and `Updates.isEmbeddedLaunch` |
+| `check()` | `Updates.checkForUpdateAsync()`. Reports `disabled` when `Updates.isEnabled` is false, or in development unless `checkInDev` is set |
+| `download()` | `Updates.fetchUpdateAsync()` |
+| `apply()` | `Updates.reloadAsync()` |
+
+### Matching releases.json
+
+The adapter reports both the update id and the EAS **update group** id, so a `releases.json` entry
+can use either. EAS prints the group id when you publish, and the same group covers iOS and Android,
+which makes it the convenient choice.

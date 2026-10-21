@@ -1,0 +1,148 @@
+---
+title: Decisions
+description: Every state a decision can be in, the fields each one carries, and how they move into each other.
+icon: GitBranch
+---
+
+A **decision** is the output of the engine: exactly one answer to "what kind of update does this
+install need right now?". It's a discriminated union on `kind`:
+
+```ts
+import type { Decision } from 'upwell';
+
+function describe(decision: Decision) {
+  switch (decision.kind) {
+    case 'upToDate':
+    case 'ota.downloading':
+    case 'ota.ready':
+    case 'store.recommended':
+    case 'store.downloading':
+    case 'store.readyToInstall':
+    case 'store.required':
+    case 'error':
+      return decision.because; // every decision explains itself
+  }
+}
+```
+
+## State machine
+
+<Mermaid
+  chart="
+stateDiagram-v2
+  [*] --> upToDate
+  upToDate --> ota.downloading: OTA update for this runtime
+  ota.downloading --> ota.ready: downloaded
+  ota.ready --> [*]: restart (applyMode)
+  upToDate --> store.recommended: newer build, old enough, in rollout
+  store.recommended --> store.downloading: accepted (Play flexible)
+  store.recommended --> upToDate: Later (snoozed)
+  store.downloading --> store.readyToInstall: downloaded
+  store.readyToInstall --> [*]: restart to install
+  upToDate --> store.required: below minimum / stale / stranded too long
+  store.required --> store.downloading: accepted (Play immediate)
+  upToDate --> error: no policy at all
+"
+/>
+
+## Decision kinds
+
+### `upToDate`
+
+Nothing to do. When a recommendation exists but is hidden by a snooze or the prompt cap, `snoozed` is set:
+
+```ts
+{ kind: 'upToDate', snoozed?: { target: TargetVersion; until: number | null }, because: string }
+```
+
+### `ota.downloading`
+
+An OTA update exists for the running runtime and is downloading in the background.
+
+### `ota.ready`
+
+The OTA update is downloaded. `applyMode` says what happens next:
+
+| `applyMode` | Behavior |
+| --- | --- |
+| `nextLaunch` | Nothing visible. The update runs the next time the app cold-starts |
+| `prompt` | `RestartSnackbar` offers "Restart". If the user dismisses it, the decision falls back to `nextLaunch` for this session |
+| `immediate` | Upwell restarts into the update as soon as it's downloaded |
+
+### `store.recommended`
+
+A newer store build is available and the user should be asked to install it.
+
+| Field | Type | |
+| --- | --- | --- |
+| `reason` | `'newerVersion' \| 'highPriority' \| 'stranded'` | Why: a newer build is old enough, Play priority ≥ 4, or the install is stranded |
+| `flow` | `StoreFlow` | How `startUpdate()` will run it (see [Store flows](/docs/concepts/store-flows)) |
+| `target` | `{ version, build }` | The build to move to. Either field can be `null`, e.g. when only Play's `availableVersionCode` is known |
+| `storeUrl` | `string \| null` | The store page |
+| `message` | `{ title?, body?, releaseNotesUrl? } \| null` | From the policy's `message` |
+
+### `store.downloading`
+
+A Play update is downloading (Android only). Live Play state always wins over other rules, so the
+progress is never hidden.
+
+| Field | Type | |
+| --- | --- | --- |
+| `progress` | `number \| null` | 0–1, or `null` while the size is unknown |
+| `bytesDownloaded` | `number` | |
+| `totalBytesToDownload` | `number` | |
+| `required` | `boolean` | `true` when this download is for a required update |
+| `target` | `{ version, build }` | |
+
+### `store.readyToInstall`
+
+A flexible Play update is downloaded. `startUpdate()` (or the "Restart" button) installs it, and the
+app restarts. If the user postpones it, Upwell installs it the next time the app goes to the background.
+
+### `store.required`
+
+The user must update before using the app. It has the same fields as `store.recommended`, except that
+`reason` is one of:
+
+| `reason` | Trigger |
+| --- | --- |
+| `belowMinimum` | Installed build is below `minimum` |
+| `stale` | The newer build has been out for at least `requireAfterDays` |
+| `stranded` | The install is stranded and the newer build has been out for at least `ota.strandedRequireAfterDays` |
+
+`message` comes from the policy's `requiredMessage`. Required decisions ignore snoozes, prompt caps
+and rollout, and `dismiss()` does nothing for them.
+
+### `error`
+
+There's no policy at all (no fresh copy, no cached copy) and nothing else to do. `reason` holds the
+fetch or validation error. When a cached policy exists, Upwell uses it instead and decides normally,
+so you'll rarely see `error` after the first successful launch.
+
+## Precedence
+
+When several things are true at once, the engine picks in this order:
+
+1. **Live Play state.** An update that is downloading or downloaded (`store.downloading`, `store.readyToInstall`).
+2. **Required** (`store.required`).
+3. **OTA** (`ota.ready`, `ota.downloading`).
+4. **Recommended** (`store.recommended`), unless it's snoozed or capped.
+5. **Error**, when there's no policy.
+6. **Up to date.**
+
+So an install that is below `minimum` is blocked even if an OTA update is waiting, and a
+recommendation waits until a pending OTA update is ready.
+
+## The `because` line
+
+Every decision carries a human-readable `because`:
+
+```
+required: build 290 < minimum 300
+recommended: stranded on runtime 3.3.0, latest OTA needs 3.4.0
+snoozed: dismissed, hidden until 2026-10-22T09:14:00.000Z
+rollout: bucket 73 is outside 10%
+```
+
+The full list of rules the engine evaluated is available through `explain()`. See
+[Debugging and analytics](/docs/guides/debugging-and-analytics).

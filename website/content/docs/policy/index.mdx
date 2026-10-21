@@ -1,0 +1,266 @@
+---
+title: policy.json reference
+description: Every field of the remote policy that controls Upwell, with defaults and examples.
+icon: FileBraces
+---
+
+The policy is a JSON file you host. Upwell fetches it on every check, validates it, and caches the
+last valid copy. Change it and you change how every installed app behaves, with no new release.
+
+```json title="policy.json"
+{
+  "$schema": "https://unpkg.com/upwell/schemas/policy.schema.json",
+  "schemaVersion": 1,
+  "android": {
+    "latest": { "version": "3.4.0", "build": 340, "releasedAt": "2026-10-18" },
+    "minimum": { "version": "3.0.0", "build": 300 },
+    "recommendAfterDays": 2,
+    "requireAfterDays": null,
+    "rollout": 100,
+    "ota": {
+      "latestRuntimeVersion": "3.4.0",
+      "applyMode": "nextLaunch",
+      "strandedRequireAfterDays": 14
+    },
+    "message": {
+      "title": "Update available",
+      "body": "This version fixes checkout on older devices.",
+      "releaseNotesUrl": "https://example.com/changelog"
+    }
+  },
+  "ios": {
+    "appStoreId": "1234567890",
+    "latest": { "version": "3.4.0", "build": "1", "releasedAt": "2026-10-18" },
+    "minimum": { "version": "3.0.0", "build": "1" },
+    "recommendAfterDays": 2,
+    "ota": {
+      "latestRuntimeVersion": "3.4.0",
+      "applyMode": "prompt",
+      "strandedRequireAfterDays": 14
+    }
+  }
+}
+```
+
+## Top level
+
+<TypeTable
+  type={{
+    schemaVersion: {
+      type: '1',
+      required: true,
+      description: 'The policy format version. Always 1 for now.',
+    },
+    android: {
+      type: 'PlatformPolicy',
+      description: 'Rules for Android installs. Leave it out and Android installs only get OTA updates.',
+    },
+    ios: {
+      type: 'IosPolicy',
+      description: 'Rules for iOS installs. Same fields as android, plus appStoreId and country.',
+    },
+    $schema: {
+      type: 'string',
+      description: 'Points editors at the published JSON Schema. Ignored at runtime.',
+    },
+  }}
+/>
+
+## Platform fields
+
+Every field is optional. A platform section with nothing in it is valid and does nothing.
+
+<TypeTable
+  type={{
+    latest: {
+      type: '{ version, build, releasedAt? }',
+      description: 'The newest build in the store. Installs below it may be prompted.',
+    },
+    minimum: {
+      type: '{ version, build }',
+      description: 'Installs below this are required to update. Must not be above latest.',
+    },
+    recommendAfterDays: {
+      type: 'number | null',
+      default: '0',
+      description: 'Recommend an update once it has been out this many days.',
+    },
+    requireAfterDays: {
+      type: 'number | null',
+      default: 'null (never)',
+      description: 'Require an update once it has been out this many days.',
+    },
+    rollout: {
+      type: 'number (0–100)',
+      default: '100',
+      description: 'Percentage of installs that see recommendations. Required and stranded updates reach everyone.',
+    },
+    ota: {
+      type: 'OtaPolicy',
+      description: 'OTA settings, see below.',
+    },
+    message: {
+      type: '{ title?, body?, releaseNotesUrl? }',
+      description: 'Copy for recommended updates, shown by UpdatePrompt.',
+    },
+    requiredMessage: {
+      type: '{ title?, body?, releaseNotesUrl? }',
+      default: 'built-in copy',
+      description: 'Copy for the blocking screen.',
+    },
+    storeUrl: {
+      type: 'string',
+      description: 'Overrides the store link, e.g. to send users to another store.',
+    },
+  }}
+/>
+
+### Version references
+
+`latest` and `minimum` are version references:
+
+<TypeTable
+  type={{
+    version: {
+      type: 'string',
+      required: true,
+      description: 'Display version (versionName / CFBundleShortVersionString), e.g. "3.4.0".',
+    },
+    build: {
+      type: 'number | string',
+      required: true,
+      description: 'Build number (versionCode / CFBundleVersion). Compared numerically, one dot-separated segment at a time.',
+    },
+    releasedAt: {
+      type: 'string (ISO date)',
+      description: 'When this version reached the store, e.g. "2026-10-18". Drives staleness when Play does not report it, and always on iOS.',
+    },
+  }}
+/>
+
+<Callout title="Comparisons use build numbers">
+  Android compares `versionCode` only. iOS compares the version first, then `CFBundleVersion`,
+  because many teams reset the build number for each version. Version names are shown to users, but
+  never decide anything on Android. See [Comparing versions](/docs/concepts/decision-engine#comparing-versions).
+</Callout>
+
+### OTA
+
+<TypeTable
+  type={{
+    latestRuntimeVersion: {
+      type: 'string',
+      description: 'The runtime your newest OTA updates target. Installs on any other runtime are stranded.',
+    },
+    applyMode: {
+      type: '"nextLaunch" | "prompt" | "immediate"',
+      default: '"nextLaunch"',
+      description: 'When a downloaded OTA update is applied.',
+    },
+    strandedRequireAfterDays: {
+      type: 'number | null',
+      default: 'null (never)',
+      description: 'Stranded installs are required to update once the newer build is this many days old.',
+    },
+  }}
+/>
+
+### iOS only
+
+<TypeTable
+  type={{
+    appStoreId: {
+      type: 'string (digits)',
+      description: 'The numeric App Store id, e.g. "1234567890". Enables the in-app App Store sheet and makes the lookup more reliable.',
+    },
+    country: {
+      type: 'string (2 letters)',
+      default: 'device region',
+      description: 'Storefront for the App Store lookup. Region-restricted apps are only found in their storefront.',
+    },
+  }}
+/>
+
+## Staleness
+
+"How old is the update?" decides `recommendAfterDays`, `requireAfterDays` and
+`strandedRequireAfterDays`. It comes from:
+
+1. **Android:** Play's `clientVersionStalenessDays`, the number of days since this device learned about the
+   update, when Play reports it.
+2. **Otherwise:** `latest.releasedAt` from the policy, when the target is the policy's `latest`.
+3. **iOS:** the App Store's release date, when the lookup's version is the target.
+
+<Callout type="warn" title="Set releasedAt on iOS">
+  iOS has no staleness or priority signal. Without `latest.releasedAt`, staleness is unknown, so
+  `recommendAfterDays` above 0 never recommends and `requireAfterDays` never escalates.
+</Callout>
+
+## Messages
+
+`message` and `requiredMessage` let you write the copy per release without shipping a new build:
+
+```json
+"message": {
+  "title": "A faster checkout",
+  "body": "Version 3.4 cuts checkout time in half.",
+  "releaseNotesUrl": "https://example.com/changelog/3.4"
+},
+"requiredMessage": {
+  "title": "Update required",
+  "body": "This version can no longer place orders. Update to continue."
+}
+```
+
+When a field is missing, the UI kit falls back to its [strings](/docs/guides/theming#strings).
+
+## Forward compatibility
+
+Unknown keys are **ignored with a warning**, not rejected, so a policy written for a newer Upwell
+doesn't break older app versions. Warnings appear in `state.policyWarnings`. Invalid values (wrong
+types, `minimum` above `latest`) make the whole policy invalid, and Upwell keeps using the last valid
+copy. See [Validation](/docs/policy/validation).
+
+## Examples
+
+<Accordions>
+<Accordion title="Only force a minimum version">
+
+```json
+{
+  "schemaVersion": 1,
+  "android": { "minimum": { "version": "3.0.0", "build": 300 } },
+  "ios": { "appStoreId": "1234567890", "minimum": { "version": "3.0.0", "build": "1" } }
+}
+```
+
+</Accordion>
+<Accordion title="Gentle nudge after a week, require after a month">
+
+```json
+{
+  "schemaVersion": 1,
+  "android": {
+    "latest": { "version": "3.4.0", "build": 340, "releasedAt": "2026-10-18" },
+    "recommendAfterDays": 7,
+    "requireAfterDays": 30
+  }
+}
+```
+
+</Accordion>
+<Accordion title="OTA only, restart prompt">
+
+```json
+{
+  "schemaVersion": 1,
+  "android": { "ota": { "applyMode": "prompt" } },
+  "ios": { "ota": { "applyMode": "prompt" } }
+}
+```
+
+</Accordion>
+</Accordions>
+
+More in the guides: [forced updates](/docs/guides/forced-updates), [staged rollout](/docs/guides/staged-rollout),
+[stranded installs](/docs/concepts/stranded-installs).

@@ -1,0 +1,111 @@
+---
+title: Theming and localization
+description: Colors, radius, spacing, fonts and strings for the UI kit, in light and dark mode.
+icon: Palette
+---
+
+Wrap your app (or just the UI kit) in `UpwellThemeProvider`:
+
+```tsx
+import { UpwellThemeProvider, UpwellUI } from 'upwell/ui';
+
+<UpwellThemeProvider
+  theme={{ radius: 8, fontFamily: 'Inter', strings: { update: 'Aktualisieren', later: 'Später' } }}
+  light={{ colors: { primary: '#E23744' } }}
+  dark={{ colors: { primary: '#FF5A65' } }}
+>
+  <UpwellUI />
+</UpwellThemeProvider>;
+```
+
+| Prop | |
+| --- | --- |
+| `theme` | Overrides applied to both schemes |
+| `light` / `dark` | Overrides per scheme, applied after `theme` |
+| `scheme` | Force `'light'` or `'dark'`. Default: follows the system (`useColorScheme()`) |
+
+Overrides are merged into the defaults, so you only set what you change. Without a provider, the
+components use the default light or dark theme.
+
+## Theme shape
+
+<TypeTable
+  type={{
+    colors: { type: 'UpwellColors', description: 'See below.' },
+    radius: { type: 'number', default: '12', description: 'Corner radius of cards, buttons and sheets.' },
+    spacing: { type: 'number', default: '16', description: 'Base padding.' },
+    fontFamily: { type: 'string', description: 'Font for all text. Default: the system font.' },
+    strings: { type: 'UpwellStrings', description: 'Every user-facing string, see below.' },
+  }}
+/>
+
+### Colors
+
+| Key | Light | Dark | Used for |
+| --- | --- | --- | --- |
+| `background` | `#FFFFFF` | `#0D1117` | Screens and sheets |
+| `surface` | `#F4F5F7` | `#161B22` | Floating cards |
+| `text` | `#111418` | `#E6EDF3` | Body text |
+| `mutedText` | `#5C6370` | `#8B949E` | Secondary text |
+| `primary` | `#1F6FEB` | `#4C8DFF` | Primary buttons, progress |
+| `onPrimary` | `#FFFFFF` | `#0D1117` | Text on primary |
+| `border` | `#DDE1E6` | `#30363D` | Card borders |
+| `overlay` | `rgba(0,0,0,0.4)` | `rgba(0,0,0,0.6)` | Sheet backdrop |
+| `progressTrack` | `#DDE1E6` | `#30363D` | Progress bar track |
+| `kind.fix` / `kind.content` / `kind.feature` | green / purple / amber | | Release kind badges |
+
+## Strings
+
+Every string can be replaced, which is also how you localize the UI kit:
+
+| Key | Default |
+| --- | --- |
+| `updateAvailableTitle` | Update available |
+| `updateAvailableBody` | A new version of the app is ready to install. |
+| `update` | Update |
+| `later` | Later |
+| `restart` | Restart |
+| `requiredTitle` | Update required |
+| `requiredBody` | This version is no longer supported. Please update to keep using the app. |
+| `downloading(percent)` | Downloading update… 42% |
+| `storeDownloaded` | Update downloaded. Restart to install it. |
+| `otaReady` | A new version is ready. Restart to use it. |
+| `updatedTitle` | Updated |
+| `gotIt` | Got it |
+| `whatsNewTitle` | What's new |
+| `whatsNewEmpty` | No updates yet for this version. |
+| `releaseNotes` | Release notes |
+| `kind.fix` / `kind.content` / `kind.feature` | Fix / Content / Feature |
+
+`downloading` is a function, so you can format the percentage:
+
+```tsx
+strings: {
+  downloading: (percent) => (percent == null ? 'Wird geladen…' : `Wird geladen… ${percent} %`),
+}
+```
+
+Policy copy wins over strings: `message` and `requiredMessage` in the policy replace the title and
+body of the prompt and the blocking screen. Localize those by serving a policy per language, or keep
+them out of the policy and localize the strings.
+
+## Positioning
+
+Floating components (`UpdatePrompt`, `DownloadProgressBanner`, `RestartSnackbar`, and `UpwellUI`)
+take `bottomOffset`, the distance from the bottom of the screen. Add your safe-area inset or tab bar height:
+
+```tsx
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+function UpdateLayer() {
+  const insets = useSafeAreaInsets();
+  return <UpwellUI bottomOffset={insets.bottom + 64} />;
+}
+```
+
+Every component also accepts `style`.
+
+## Building blocks
+
+The kit's primitives are exported for your own update screens, so they match:
+`UpwellButton`, `UpwellText` and `ProgressBar`. `useUpwellTheme()` returns the active theme.

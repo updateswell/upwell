@@ -1,0 +1,149 @@
+---
+title: Quick start
+description: Publish a policy, wrap your app, and let Upwell handle the update flows.
+icon: Rocket
+---
+
+This guide gets you from zero to working store and OTA prompts. It assumes you've
+[installed Upwell](/docs/installation) and rebuilt your app.
+
+<Steps>
+<Step>
+
+### Publish a policy
+
+Create a `policy.json` and host it anywhere that serves static files: a CDN, S3, GitHub Pages, or
+your own API. Upwell fetches it on launch and on foreground.
+
+```json title="policy.json"
+{
+  "$schema": "https://unpkg.com/upwell/schemas/policy.schema.json",
+  "schemaVersion": 1,
+  "android": {
+    "latest": { "version": "3.4.0", "build": 340, "releasedAt": "2026-10-18" },
+    "minimum": { "version": "3.0.0", "build": 300 },
+    "recommendAfterDays": 2,
+    "ota": {
+      "latestRuntimeVersion": "3.4.0",
+      "applyMode": "nextLaunch",
+      "strandedRequireAfterDays": 14
+    }
+  },
+  "ios": {
+    "appStoreId": "1234567890",
+    "latest": { "version": "3.4.0", "build": "1", "releasedAt": "2026-10-18" },
+    "minimum": { "version": "3.0.0", "build": "1" },
+    "ota": { "latestRuntimeVersion": "3.4.0", "applyMode": "prompt" }
+  }
+}
+```
+
+The policy says:
+
+- The newest store build is `3.4.0`. Installs below it get a recommendation once the build is 2 days old.
+- Installs below `3.0.0` **must** update.
+- OTA updates target runtime `3.4.0`. Installs on another runtime are stranded, and they must update
+  14 days after `3.4.0` shipped.
+
+The `$schema` line gives you autocomplete and validation in your editor. Every field is described in
+the [policy reference](/docs/policy).
+
+</Step>
+<Step>
+
+### Wrap your app
+
+Put `UpwellProvider` near the root of your app and render `UpwellUI` once, as its last child:
+
+```tsx title="App.tsx"
+import { UpwellProvider } from 'upwell/react';
+import { expoUpdatesAdapter } from 'upwell/expo-updates';
+import { UpwellUI } from 'upwell/ui';
+
+export default function App() {
+  return (
+    <UpwellProvider
+      policy="https://example.com/upwell/policy.json"
+      ota={expoUpdatesAdapter()}
+    >
+      <RootNavigator />
+      <UpwellUI />
+    </UpwellProvider>
+  );
+}
+```
+
+That's all the code you need. Upwell checks when the provider mounts and every time the app comes back to
+the foreground (at most once a minute). `<UpwellUI />` renders whatever the current decision calls for:
+
+| Decision | UI |
+| --- | --- |
+| `store.recommended` | `UpdatePrompt`: "Update" / "Later" |
+| `store.downloading` | `DownloadProgressBanner` |
+| `store.readyToInstall`, `ota.ready` (prompt mode) | `RestartSnackbar` |
+| `store.required` | `ForceUpdateScreen`, which can't be dismissed |
+| An OTA update was just applied | `UpdatedSheet`, if you publish `releases.json` |
+
+</Step>
+<Step>
+
+### Try every state
+
+You don't need to publish a store build to see the flows. Add the dev menu to a debug screen and
+tap through the scenarios:
+
+```tsx title="DebugScreen.tsx"
+import { UpwellDevMenu } from 'upwell/ui';
+
+export function DebugScreen() {
+  return <UpwellDevMenu style={{ flex: 1 }} />;
+}
+```
+
+On Android, the "recommended" and "required" scenarios run Play's `FakeAppUpdateManager` inside the
+native module, so the real Kotlin code path runs. See [Testing and simulation](/docs/guides/testing-and-simulation).
+
+</Step>
+<Step>
+
+### Ship
+
+When you release a new store build, update `latest` in the policy. When you need everyone off an old
+version, raise `minimum`. When you change native code and bump the runtime, update
+`ota.latestRuntimeVersion`. You never need a new app release to change how Upwell behaves.
+
+</Step>
+</Steps>
+
+## Prefer your own UI?
+
+Skip `<UpwellUI />` and read the decision yourself with [`useAppUpdate()`](/docs/reference/react#useappupdate):
+
+```tsx
+import { useAppUpdate } from 'upwell/react';
+
+function UpdateBanner() {
+  const { decision, startUpdate, dismiss } = useAppUpdate();
+  if (decision.kind !== 'store.recommended') return null;
+  return <MyBanner title={decision.message?.title} onUpdate={startUpdate} onLater={dismiss} />;
+}
+```
+
+See [Build your own UI](/docs/guides/custom-ui).
+
+## Next steps
+
+<Cards>
+  <Card title="How it works" href="/docs/concepts/how-it-works">
+    The check lifecycle and what each piece does.
+  </Card>
+  <Card title="Decisions" href="/docs/concepts/decisions">
+    Every state a decision can be in.
+  </Card>
+  <Card title="Transparent OTA" href="/docs/guides/transparent-ota">
+    Tell users what changed in each OTA update.
+  </Card>
+  <Card title="Recipes" href="/docs/guides/forced-updates">
+    Forced updates, staged rollouts and more.
+  </Card>
+</Cards>

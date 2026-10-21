@@ -1,0 +1,85 @@
+---
+title: FAQ
+description: Common questions about Upwell, OTA updates and the stores.
+icon: CircleQuestionMark
+---
+
+<Accordions>
+<Accordion title="Does Upwell host OTA updates?">
+
+No. Keep using expo-updates with EAS Update, or a self-hosted server. Upwell decides *when* to check,
+download and apply, and knows when an install can't receive updates any more.
+
+</Accordion>
+<Accordion title="Do I need a backend?">
+
+No. The policy and `releases.json` are static JSON files. Host them on a CDN, a bucket, or GitHub
+Pages. You *can* serve them from an API if you want to generate them.
+
+</Accordion>
+<Accordion title="Does it work with Expo Go?">
+
+The native module isn't available in Expo Go, so real store flows don't run there. `simulate()` and
+`<UpwellDevMenu />` do work in Expo Go, so you can still build and review your update UI.
+
+</Accordion>
+<Accordion title="Does it work in bare React Native?">
+
+Yes, as long as Expo modules are installed (`npx install-expo-modules`). See [Installation](/docs/installation#bare-react-native).
+
+</Accordion>
+<Accordion title="Can I use it without expo-updates?">
+
+Yes. Without an `ota` adapter, Upwell handles store updates only. With another OTA tool, write a small
+[adapter](/docs/guides/custom-sources-and-adapters#ota-adapters).
+
+</Accordion>
+<Accordion title="Can I force users to update?">
+
+Yes: raise `minimum` in the policy. On Android (installed from Play), Play's immediate flow blocks the app until it's
+updated. Elsewhere, `<ForceUpdateScreen />` blocks it. See [Forced updates](/docs/guides/forced-updates).
+Forced-update screens are common and accepted by both stores.
+
+</Accordion>
+<Accordion title="Is it allowed to ship features over the air?">
+
+Both stores allow OTA updates of JavaScript within their rules, and expo-updates follows them. Apple's
+guideline 2.5.19 (October 2026) bans hidden or undocumented features, so describe what you ship. See
+[Transparent OTA](/docs/guides/transparent-ota). Upwell is transparency tooling, not a compliance
+guarantee, and this isn't legal advice.
+
+</Accordion>
+<Accordion title="Does Upwell collect any data?">
+
+No. It fetches the URLs you configure, asks Play Core (Android) and the iTunes lookup API (iOS) about
+updates, and stores a few values on the device. The `installationId` used for rollout buckets never
+leaves the device. Use `onDecision` to send events to your own analytics.
+
+</Accordion>
+<Accordion title="Why compare build numbers instead of versions?">
+
+Android's `versionCode` always increases, while version names are free-form text. On iOS, Upwell compares the version first
+and then `CFBundleVersion`, because many teams reset the build number for each version. See
+[Comparing versions](/docs/concepts/decision-engine#comparing-versions).
+
+</Accordion>
+<Accordion title="What happens when the policy URL is down?">
+
+Upwell uses the last valid policy it cached and decides normally. Only an install that has never fetched a
+policy, and has nothing else to do, gets an `error` decision. See [Last known good](/docs/policy/hosting#last-known-good).
+
+</Accordion>
+<Accordion title="How is this different from react-native-in-app-updates or expo-in-app-updates?">
+
+Those wrap Play's in-app update API. Upwell has its own Play Core integration too, but it also covers
+iOS, OTA updates, stranded installs, a remote policy with rollout, escalation and snoozes, a UI kit,
+simulation, and OTA release notes, all behind one decision engine.
+
+</Accordion>
+<Accordion title="Huawei AppGallery, sideloaded APK self-updates?">
+
+Not in v1. Sideloaded installs get a store link, which you can point anywhere with `storeUrl`.
+AppGallery is on the [roadmap](/docs/resources/roadmap).
+
+</Accordion>
+</Accordions>

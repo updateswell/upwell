@@ -1,0 +1,106 @@
+---
+title: releases.json reference
+description: Describe every OTA release, so users (and reviewers) can see what changed.
+icon: ScrollText
+---
+
+`releases.json` is an optional second file you publish next to `policy.json`. It lists your OTA
+releases with user-facing notes. Upwell matches the running update against it to power
+`<UpdatedSheet />`, `<WhatsNew />` and [`useUpdateHistory()`](/docs/reference/react#useupdatehistory).
+
+```json title="releases.json"
+{
+  "$schema": "https://unpkg.com/upwell/schemas/releases.schema.json",
+  "schemaVersion": 1,
+  "releases": [
+    {
+      "id": "0b9e6a3c-5a7f-4b36-9a84-1c4f3f1e2d77",
+      "platforms": ["ios", "android"],
+      "runtimeVersion": "3.4.0",
+      "kind": "fix",
+      "notes": "Fixed a crash at checkout on iOS 27.",
+      "publishedAt": "2026-10-21T10:00:00Z"
+    },
+    {
+      "id": "6f1d2c55-9d0e-4a59-8f3b-7a2e8c4b1a90",
+      "platforms": ["ios", "android"],
+      "runtimeVersion": "3.4.0",
+      "kind": "content",
+      "notes": "Updated the Diwali offers banner.",
+      "publishedAt": "2026-10-19T08:30:00Z"
+    }
+  ]
+}
+```
+
+Pass it to the provider:
+
+```tsx
+<UpwellProvider
+  policy="https://example.com/upwell/policy.json"
+  releases="https://example.com/upwell/releases.json"
+  ota={expoUpdatesAdapter()}
+>
+```
+
+## Release fields
+
+<TypeTable
+  type={{
+    id: {
+      type: 'string',
+      required: true,
+      description: 'The OTA update id or the EAS update group id. The expo-updates adapter matches either, case-insensitively. Must be unique.',
+    },
+    platforms: {
+      type: '("ios" | "android")[]',
+      required: true,
+      description: 'Platforms this release shipped to. Must not be empty.',
+    },
+    runtimeVersion: {
+      type: 'string',
+      required: true,
+      description: 'The runtime the update targets. "What\'s new" lists releases for the running runtime only.',
+    },
+    kind: {
+      type: '"fix" | "content" | "feature"',
+      required: true,
+      description: 'What kind of change it is. Shown as a badge.',
+    },
+    notes: {
+      type: 'string',
+      required: true,
+      description: 'User-facing description of what changed. Be specific.',
+    },
+    publishedAt: {
+      type: 'string (ISO timestamp)',
+      required: true,
+      description: 'When it was published. History is sorted newest first.',
+    },
+    bundleHash: {
+      type: '"sha256-…"',
+      description: 'Reserved for the signed release log (planned). Validated but unused today.',
+    },
+  }}
+/>
+
+## Kinds
+
+| `kind` | Use it for |
+| --- | --- |
+| `fix` | Bug fixes, performance, crash fixes |
+| `content` | Copy, images, configuration, seasonal content |
+| `feature` | New functionality. Use this honestly: new features belong in a store submission with Review Notes that describe them |
+
+## How matching works
+
+- **Current release.** The adapter reports every id the running update is known by (update id and EAS
+  group id). The first entry for this platform with a matching id is `current`.
+- **History.** Every entry for this platform and the running runtime, newest first.
+- **Just updated.** On a launch where the running update id differs from the last one the user saw,
+  and it has an entry, `justUpdated` is set and `<UpdatedSheet />` shows its notes once. The first launch
+  of a fresh install never shows the sheet, and neither does an update without an entry.
+
+A failed or invalid `releases.json` fetch falls back to the last valid copy, like the policy.
+
+See [Transparent OTA](/docs/guides/transparent-ota) for the full workflow with EAS Update.

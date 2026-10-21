@@ -1,0 +1,57 @@
+---
+title: Contributing
+description: Set up the repository, run the tests, and work on the docs.
+icon: GitPullRequest
+---
+
+Upwell is MIT licensed and developed on [GitHub](https://github.com/updateswell/upwell). Issues and
+pull requests are welcome.
+
+## The repository
+
+<Files>
+  <Folder name="upwell" defaultOpen>
+    <Folder name="src" defaultOpen>
+      <File name="core/ (decision engine, validation, versions)" />
+      <File name="controller.ts" />
+      <File name="react/" />
+      <File name="ui/" />
+      <File name="expo-updates/" />
+      <File name="simulation/" />
+    </Folder>
+    <File name="android/ (Kotlin, Play Core)" />
+    <File name="ios/ (Swift, StoreKit)" />
+    <File name="plugin/ (config plugin)" />
+    <File name="schemas/ (JSON Schemas)" />
+    <File name="example/ (example app)" />
+    <File name="website/ (this site)" />
+  </Folder>
+</Files>
+
+## Library
+
+```bash
+npm install
+npm test                          # engine table tests, controller, hooks, UI, plugin
+npm run lint && npm run typecheck
+npx changeset                     # describe your change for the changelog
+```
+
+Engine changes start with a table test in `src/core/__tests__`. `decide()` is pure, so every rule
+can be covered without a device.
+
+Android native code needs JDK 21 for Gradle. iOS native code is compiled in CI on macOS.
+
+## Docs
+
+This site is a [Fumadocs](https://fumadocs.dev) app in `website/`, deployed separately from the library.
+
+```bash
+cd website
+npm install
+npm run dev     # http://localhost:3000/docs
+npm run build
+```
+
+Pages are MDX files in `website/content/docs`, and `meta.json` files set the sidebar order. Every page
+has an "Open in GitHub" link, so fixing a typo is one click away.

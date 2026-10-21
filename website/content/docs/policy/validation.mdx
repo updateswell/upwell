@@ -1,0 +1,93 @@
+---
+title: Validation and JSON Schema
+description: Editor autocomplete with the published JSON Schemas, and how the runtime validator treats errors and warnings.
+icon: ShieldCheck
+---
+
+## JSON Schema in your editor
+
+Upwell publishes JSON Schemas for both files. Add `$schema` to get autocomplete, hover docs and
+inline errors in VS Code and other editors:
+
+```json
+{
+  "$schema": "https://unpkg.com/upwell/schemas/policy.schema.json",
+  "schemaVersion": 1
+}
+```
+
+| File | Schema |
+| --- | --- |
+| `policy.json` | `https://unpkg.com/upwell/schemas/policy.schema.json` |
+| `releases.json` | `https://unpkg.com/upwell/schemas/releases.schema.json` |
+
+The schemas also ship in the package (`upwell/schemas/policy.schema.json`), so you can validate in CI
+with any JSON Schema validator:
+
+```bash
+npx ajv-cli validate --spec=draft7 -s node_modules/upwell/schemas/policy.schema.json -d policy.json
+```
+
+## The runtime validator
+
+Every fetched policy goes through `validatePolicy()` before it's used. It's stricter than the schema:
+
+| Check | Result |
+| --- | --- |
+| `schemaVersion` isn't `1` | Error |
+| `version` / `build` aren't comparable (e.g. `"three"`) | Error |
+| `releasedAt` isn't an ISO date | Error |
+| `minimum.build` is above `latest.build` | Error: every install would be blocked with nothing to update to |
+| `rollout` outside 0–100, negative day counts | Error |
+| Unknown `applyMode` | Error |
+| `appStoreId` isn't numeric, `country` isn't two letters | Error |
+| `requireAfterDays` below `recommendAfterDays` | Warning: users skip the recommendation |
+| Unknown keys | Warning, ignored |
+
+**Errors** reject the whole policy, and Upwell keeps using the last valid copy. **Warnings** don't stop
+anything, so newer policies stay compatible with older app versions.
+
+`releases.json` is validated the same way with `validateReleases()`: required fields, known `kind`
+and `platforms` values, ISO timestamps, and unique ids.
+
+## Validating in CI
+
+The validators are plain functions. Because `upwell` is a React Native package, the easiest place to
+run them is your app's existing Jest setup (for example with the `jest-expo` preset), so a broken
+policy fails CI before you publish it:
+
+```ts title="__tests__/upwell-policy.test.ts"
+import { validatePolicy, validateReleases } from 'upwell';
+
+import policy from '../upwell/policy.json';
+import releases from '../upwell/releases.json';
+
+test('policy.json is valid', () => {
+  const result = validatePolicy(policy);
+  expect(result.ok ? [] : result.errors).toEqual([]);
+  expect(result.warnings).toEqual([]);
+});
+
+test('releases.json is valid', () => {
+  const result = validateReleases(releases);
+  expect(result.ok ? [] : result.errors).toEqual([]);
+});
+```
+
+You can also assert decisions there with [`decide()`](/docs/reference/core#decide), e.g. "build 290
+is required to update".
+
+<Callout>
+  Outside a React Native toolchain (a plain Node script), use the JSON Schemas with a schema validator
+  instead. A dedicated `npx @upwell/cli validate` command is on the [roadmap](/docs/resources/roadmap).
+</Callout>
+
+## Seeing errors on a device
+
+Validation errors show up in the trace:
+
+```
+policy: latest fetch failed (invalid policy: policy.android.minimum.build: 400 is above latest.build 340; …); using last known good
+```
+
+Read it with `explain()`, the [dev menu](/docs/reference/ui#upwelldevmenu), `debug: true`, or `onError`.

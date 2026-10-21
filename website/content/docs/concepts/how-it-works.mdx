@@ -1,0 +1,100 @@
+---
+title: How it works
+description: The check lifecycle, the inputs Upwell gathers, and what runs where.
+icon: Workflow
+---
+
+## The pieces
+
+| Piece | Where | Job |
+| --- | --- | --- |
+| **Policy** | A JSON file you host | Says what's latest, what's the minimum, and how hard to push |
+| **Native module** | Kotlin and Swift | Reads the installed version, build and install source, talks to Play Core and StoreKit, stores small values in SharedPreferences / UserDefaults |
+| **OTA adapter** | `upwell/expo-updates` | Reports the running runtime and update id, checks for, downloads and applies OTA updates |
+| **Decision engine** | Pure TypeScript (`decide()`) | Turns all of the above into exactly one [decision](/docs/concepts/decisions) |
+| **Controller** | `UpwellController` | Gathers the inputs, runs the engine, performs the actions, keeps state |
+| **React bindings** | `upwell/react` | Owns a controller, runs launch and foreground checks, exposes hooks |
+| **UI kit** | `upwell/ui` | Optional components that render the current decision |
+
+The engine has no side effects, no network access and no native dependencies. Everything that
+touches the outside world lives in the controller and the platform layer. That split is what makes
+the engine table-testable and the whole flow [simulatable](/docs/guides/testing-and-simulation).
+
+## A check, step by step
+
+<Mermaid
+  chart="
+sequenceDiagram
+  participant App
+  participant C as Controller
+  participant N as Native module
+  participant P as Policy URL
+  participant S as Store
+  participant O as OTA adapter
+  App->>C: check() on mount / foreground
+  C->>N: installed info (version, build, source, install id)
+  C->>O: runtime version, update id
+  par in parallel
+    C->>P: fetch policy.json (+ releases.json)
+    C->>O: check for an OTA update
+  end
+  C->>S: Play app update info / App Store lookup
+  C->>C: decide(inputs) → decision + trace
+  C-->>App: state update (useAppUpdate re-renders)
+  opt OTA update available
+    C->>O: download in the background
+    C-->>App: ota.ready
+  end
+"
+/>
+
+1. **Read the device.** Version name, build number, app id, OS version, install source and a random
+   per-install id. This is read once per session.
+2. **Ask the OTA adapter** which runtime version and update id are running.
+3. **Fetch the policy** (and `releases.json`, if configured) and check for an OTA update, in parallel.
+   Fetches time out after 10 seconds (`timeoutMs`).
+4. **Validate the policy.** A valid policy is cached. If the fetch fails or the policy is invalid,
+   the last known good copy is used instead and the error is recorded in the trace.
+5. **Ask the store.** On Android, Play Core's `AppUpdateInfo` (only for installs from Play). On iOS,
+   the iTunes lookup API.
+6. **Decide.** `decide()` runs every rule and returns one decision plus a trace.
+7. **Act.** If an OTA update is available and `autoDownloadOta` isn't `false`, it starts downloading.
+   With `applyMode: "immediate"`, the app restarts into it once the download finishes.
+
+After the check, Upwell keeps listening. Play's download progress events re-run the engine without
+touching the network, so progress bars stay live. When the user acts (`startUpdate()`, `dismiss()`),
+the engine runs again on the latest inputs.
+
+## When checks run
+
+| Trigger | Behavior |
+| --- | --- |
+| Provider mounts | Forced check (`checkOnMount`, default `true`) |
+| App returns to the foreground | Check, throttled by `minCheckIntervalMs` (default 60 s) (`checkOnForeground`, default `true`) |
+| App goes to the background | If a flexible update is downloaded and the user postponed it, Upwell installs it quietly |
+| A Play update finishes installing | Everything is read again |
+| You call `check()` | `useAppUpdate().check()` always forces; `controller.check()` respects the throttle unless you pass `{ force: true }` |
+
+Concurrent checks share one run, so calling `check()` while a check is running is safe.
+
+## What gets stored on the device
+
+Upwell keeps a few small values in SharedPreferences (Android) or `UserDefaults` (iOS), with no extra
+storage dependency:
+
+| Key | Purpose |
+| --- | --- |
+| `installationId` | Random id used for [rollout](/docs/guides/staged-rollout) bucketing. Never leaves the device |
+| `policy`, `releases` | Last known good copies, used when a fetch fails |
+| `prompts` | When a recommendation was dismissed and when prompts were shown, for snoozes and caps |
+| `lastSeenUpdateId` | The last OTA update the user was told about, for the "Updated" sheet |
+
+Simulation uses separate in-memory storage, so it never touches these values.
+
+## What Upwell doesn't do
+
+- **Host OTA bundles.** expo-updates (or your OTA tool) still does that.
+- **Run a backend.** The policy is a static file. You can serve it from an API if you want to, but nothing requires one.
+- **Collect analytics.** Nothing is sent anywhere except the policy and releases fetches you configure and the
+  store lookups. Use [`onDecision`](/docs/guides/debugging-and-analytics) to log to your own analytics.
+- **Behave differently for App Review.** It never will. See [Transparent OTA](/docs/guides/transparent-ota).

@@ -1,0 +1,117 @@
+---
+title: upwell/react
+description: UpwellProvider, useAppUpdate, useUpdateHistory, useUpwell and useUpwellState.
+icon: Atom
+---
+
+```ts
+import { UpwellProvider, useAppUpdate, useUpdateHistory, useUpwell, useUpwellState } from 'upwell/react';
+```
+
+## UpwellProvider
+
+Owns an [`UpwellController`](/docs/reference/controller) and runs the launch and foreground checks.
+
+```tsx
+<UpwellProvider
+  policy="https://cdn.example.com/upwell/policy.json"
+  releases="https://cdn.example.com/upwell/releases.json"
+  ota={expoUpdatesAdapter()}
+  debug={__DEV__}
+>
+  <App />
+</UpwellProvider>
+```
+
+It accepts every [`UpwellOptions`](/docs/reference/controller#upwelloptions) field, plus:
+
+<TypeTable
+  type={{
+    controller: {
+      type: 'UpwellController',
+      description: 'Use an existing controller instead of creating one. The other options are then ignored.',
+    },
+    checkOnMount: {
+      type: 'boolean',
+      default: 'true',
+      description: 'Check when the provider mounts.',
+    },
+    checkOnForeground: {
+      type: 'boolean',
+      default: 'true',
+      description: 'Check when the app returns to the foreground, throttled by minCheckIntervalMs.',
+    },
+    children: { type: 'ReactNode' },
+  }}
+/>
+
+<Callout>
+  Options are read **once**, when the provider mounts. To change them later, create a controller
+  with `createUpwell()` and pass it as `controller`.
+</Callout>
+
+## useAppUpdate
+
+What kind of update this user needs, and the actions to drive it.
+
+```tsx
+const { decision, progress, isRequired, startUpdate, dismiss } = useAppUpdate();
+```
+
+<TypeTable
+  type={{
+    decision: { type: 'Decision', description: 'The current decision. See Decisions.', typeDescriptionLink: '/docs/concepts/decisions' },
+    state: { type: 'UpwellState', description: 'The full controller state.' },
+    progress: { type: 'number | null', description: 'Download progress 0–1 while a store update downloads, else null.' },
+    isChecking: { type: 'boolean', description: 'A check is running.' },
+    isRequired: { type: 'boolean', description: 'A blocking update is needed: store.required, or a required update that is downloading.' },
+    isDismissed: { type: 'boolean', description: 'The user dismissed the current decision this session.' },
+    isBusy: { type: 'boolean', description: 'A store flow or an OTA restart is in progress. Use it for button spinners.' },
+    'check()': { type: '() => Promise<Decision>', description: 'Checks now, ignoring the throttle.' },
+    'startUpdate()': { type: '() => Promise<unknown>', description: 'Does what the decision calls for: the store flow, installing a downloaded update, or restarting into an OTA update.' },
+    'startStoreUpdate(flow?)': { type: '(flow?: StoreFlow) => Promise<unknown>', description: 'Starts a store flow. Defaults to the decision\'s flow.' },
+    'completeStoreUpdate()': { type: '() => Promise<void>', description: 'Installs a downloaded flexible update. The app restarts.' },
+    'applyOta()': { type: '() => Promise<void>', description: 'Restarts into the downloaded OTA update.' },
+    'openStore()': { type: '() => Promise<unknown>', description: 'Opens the store page, whatever the decision.' },
+    'dismiss()': { type: '() => void', description: '"Later": snoozes a recommendation, hides a restart prompt for this session. No-op for required updates.' },
+    'explain()': { type: '() => string[]', description: 'The trace of the current decision.' },
+    'simulate(scenario, options?)': { type: '(scenario: SimulationScenario | null, options?: SimulationOptions) => Promise<Decision>', description: 'Dev tool: jump to a simulated state. null goes back to the real device.' },
+  }}
+/>
+
+`startUpdate()` and `startStoreUpdate()` resolve to a [flow result](/docs/concepts/store-flows#flow-results)
+for store flows.
+
+## useUpdateHistory
+
+OTA release notes from [`releases.json`](/docs/policy/releases-json).
+
+```tsx
+const { current, history, justUpdated, markSeen } = useUpdateHistory();
+```
+
+<TypeTable
+  type={{
+    current: { type: 'Release | null', description: 'The entry for the running OTA update.' },
+    history: { type: 'Release[]', description: 'Entries for this platform and the running runtime, newest first.' },
+    justUpdated: { type: 'Release | null', description: 'The update that was just applied, until markSeen() is called.' },
+    'markSeen()': { type: '() => void', description: 'Clears justUpdated, so the "Updated" UI is not shown again.' },
+  }}
+/>
+
+## useUpwellState
+
+The full [`UpwellState`](/docs/reference/controller#upwellstate). Re-renders on every change.
+
+```tsx
+const { installed, policy, policyWarnings, trace } = useUpwellState();
+```
+
+## useUpwell
+
+The controller from the nearest provider. Throws outside one.
+
+```tsx
+const upwell = useUpwell();
+await upwell.check({ force: true });
+```

@@ -1,0 +1,110 @@
+---
+title: Android in-app updates
+description: Play flexible and immediate updates with progress, restart-to-install, priorities and resuming interrupted updates.
+icon: Smartphone
+---
+
+On Android, Upwell uses its own Play Core (`com.google.android.play:app-update`) integration. It
+doesn't wrap another library, because it needs control over progress events, `completeUpdate()`,
+interrupted immediate updates and install-source detection.
+
+## Flexible updates
+
+Used for **recommended** updates. The user keeps using the app while the update downloads.
+
+<Steps>
+<Step>
+
+### Prompt
+
+`store.recommended` with `flow: "playFlexible"`. `<UpdatePrompt />` shows "Update" / "Later".
+
+</Step>
+<Step>
+
+### Play's dialog
+
+`startUpdate()` opens Play's confirmation dialog. If the user declines it, that counts as "Later",
+and the recommendation is snoozed.
+
+</Step>
+<Step>
+
+### Background download
+
+`store.downloading` with live `progress`, `bytesDownloaded` and `totalBytesToDownload`.
+`<DownloadProgressBanner />` shows it.
+
+</Step>
+<Step>
+
+### Restart to install
+
+`store.readyToInstall`. `<RestartSnackbar />` offers "Restart", which calls `completeUpdate()`. Play
+installs the update and restarts the app.
+
+If the user dismisses the snackbar, Upwell installs the update quietly the next time the app goes to
+the background, so it's never left half-done.
+
+</Step>
+</Steps>
+
+## Immediate updates
+
+Used for **required** updates. Play shows a full-screen update UI and restarts the app when it's done.
+
+If the user leaves the update screen (for example with the home button), Play stops showing it.
+Upwell resumes it when the app comes back to the foreground
+(`DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS`), so the app can't keep running below the required
+version. If Play can't resume it, the JavaScript check shows the blocking `<ForceUpdateScreen />` again.
+
+## When Play flows don't run
+
+Play flows only run when Play can actually perform them. Otherwise Upwell uses a store link:
+
+- The install didn't come from Play (sideloaded APK, another store, `npx expo run:android`).
+- Play reports no update for this device (not rolled out yet, or the build isn't live).
+- Play says the update type isn't allowed right now.
+- For a required update: Play offers a build below `minimum`.
+
+See [Store flows](/docs/concepts/store-flows#android) for the full decision tree.
+
+## Update priority
+
+Play lets you set an `inAppUpdatePriority` (0–5) per release through the
+[Play Developer API](https://developer.android.com/guide/playcore/in-app-updates#check-priority).
+Upwell treats **priority 4 or 5 as a recommendation right away**, skipping `recommendAfterDays`.
+Priority doesn't make an update required: use `minimum` or `requireAfterDays` for that.
+
+## Staleness from Play
+
+When Play reports `clientVersionStalenessDays`, Upwell uses it for `recommendAfterDays` and
+`requireAfterDays`. It counts days since *this device* learned about the update, which is usually
+later than the release date. Without it, Upwell falls back to `latest.releasedAt`.
+
+## Play Core version
+
+Upwell depends on `com.google.android.play:app-update:2.1.0` by default. Override it with the config
+plugin:
+
+```json title="app.json"
+{
+  "expo": {
+    "plugins": [["upwell", { "playAppUpdateVersion": "2.1.0" }]]
+  }
+}
+```
+
+Or, in a bare app, with `upwellPlayAppUpdateVersion` in `android/gradle.properties`.
+
+## Testing on a real device
+
+In-app updates only work for apps installed from Play. To test the real thing:
+
+1. Upload two builds with increasing `versionCode` to
+   [internal app sharing](https://support.google.com/googleplay/android-developer/answer/9844679).
+2. Install the lower one from its sharing link.
+3. Open the higher one's sharing link (don't install it), then open your app. Play now reports an update.
+
+For day-to-day development you don't need any of this: [simulation](/docs/guides/testing-and-simulation)
+runs the real Kotlin code path against Play's `FakeAppUpdateManager`.

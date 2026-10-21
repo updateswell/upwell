@@ -1,0 +1,125 @@
+---
+title: Decision engine
+description: The rules decide() evaluates, in order, and the defaults behind them.
+icon: Cpu
+---
+
+`decide()` is a pure, synchronous function: same input, same decision. It has no network access, no
+storage and no native code, and the test suite covers it rule by rule with table tests. You can call
+it yourself, for example on a server. See [Core API](/docs/reference/core).
+
+```ts
+import { decide, explain } from 'upwell';
+
+const decision = decide({ installed, policy, store, ota, prompts, now: Date.now() });
+const { decision: same, trace } = explain({ installed, policy, store, ota, prompts, now: Date.now() });
+```
+
+## The rules
+
+### 1. Is a newer native build available?
+
+The engine looks for a **target** build, in this order:
+
+1. The policy's `latest`, if the installed build is below it.
+2. On Android, Play's `availableVersionCode`, if Play reports an update and it's above the installed build.
+3. On iOS, the App Store lookup's version, if it's above the installed version.
+
+On iOS, a target is dropped when the App Store lookup says it needs a newer iOS version than the
+device has (`minimumOsVersion`). The user can't install it, so Upwell doesn't nag.
+
+### 2. Staleness: how long has the target been out?
+
+| Source | Used when |
+| --- | --- |
+| Play's `clientVersionStalenessDays` | Android, when Play reports it (days since *this device* learned about the update) |
+| The policy's `latest.releasedAt` | The target came from the policy |
+| The App Store `currentVersionReleaseDate` | iOS, when the lookup's version is the target |
+
+If none of these is available, staleness is unknown. Set `releasedAt` on iOS: without it,
+`recommendAfterDays` above 0 and `requireAfterDays` can't be evaluated.
+
+### 3. Stranded?
+
+An install is **stranded** when `ota.latestRuntimeVersion` is set, the installed runtime is different,
+and a target exists. See [Stranded installs](/docs/concepts/stranded-installs).
+
+### 4. Required?
+
+In this order, the first that matches wins:
+
+1. **Below minimum.** The installed build is below `minimum` → `required` (`belowMinimum`).
+2. **Stale.** `requireAfterDays` is set and staleness ≥ `requireAfterDays` → `required` (`stale`).
+3. **Stranded for too long.** The install is stranded, `ota.strandedRequireAfterDays` is set, and
+   staleness ≥ that → `required` (`stranded`).
+
+### 5. Live Play state
+
+If Play reports a download in progress (`pending`, `downloading`, `installing`), the decision is
+`store.downloading`. If it reports `downloaded`, it's `store.readyToInstall`. This check runs before
+everything below, so progress is never hidden by another decision.
+
+### 6. OTA for the current runtime
+
+If a required update wasn't found: an OTA update that's downloaded → `ota.ready`. One that's
+available or downloading → `ota.downloading`.
+
+### 7. Recommended?
+
+With a target and nothing above matching:
+
+1. **Play hasn't rolled it out yet.** On Android installs from Play, if Play reports no update for
+   this device, don't recommend. The store page would say "Open", not "Update".
+2. **Stranded** → recommended (`stranded`). Stranded installs skip rollout and `recommendAfterDays`.
+3. **Rollout.** The install's bucket must be inside `rollout` (see [Staged rollout](/docs/guides/staged-rollout)).
+4. **High priority.** Play's `updatePriority` ≥ 4 → recommended (`highPriority`), regardless of age.
+5. **Old enough.** Staleness ≥ `recommendAfterDays` (default 0) → recommended (`newerVersion`). When
+   staleness is unknown, only `recommendAfterDays: 0` recommends.
+
+### 8. Snoozes and caps
+
+A recommendation is turned into `upToDate` (with `snoozed` set) when:
+
+- **Snoozed.** The user dismissed a prompt for *this same target* less than `snoozeHours` ago. A new
+  release resets the snooze.
+- **Capped.** At least `maxPrompts` prompts were shown within the last `promptPeriodHours`.
+
+Required updates ignore both.
+
+## Engine configuration
+
+```tsx
+<UpwellProvider
+  policy={url}
+  engine={{ snoozeHours: 48, maxPrompts: 2, promptPeriodHours: 24 * 14 }}
+>
+```
+
+| Option | Default | |
+| --- | --- | --- |
+| `snoozeHours` | `24` | How long "Later" hides a recommendation |
+| `maxPrompts` | `3` | Max recommendation prompts within the period |
+| `promptPeriodHours` | `168` (7 days) | The rolling period for `maxPrompts` |
+
+A prompt counts as "shown" once per target per session: re-renders and foreground checks don't add
+to the count. The cap is evaluated against the history as it was when the session started, so
+showing a prompt never makes it disappear partway through the same session.
+
+## Comparing versions
+
+**Comparisons use build numbers.** Version names are only for display.
+
+| Platform | Compared |
+| --- | --- |
+| Android | `versionCode` only |
+| iOS | `CFBundleShortVersionString` first, then `CFBundleVersion`, because many teams reset the build number for each version |
+
+Versions and builds are compared numerically, one dot-separated segment at a time:
+`1.10.0 > 1.9.9`, `340 > 300`, `1.2 == 1.2.0`, `1.0.0-beta < 1.0.0`. A leading `v` and `+build`
+metadata are ignored. See [`compareVersions`](/docs/reference/core#compareversions).
+
+## Install source
+
+Play flows only run for installs from Play: the Play API rejects other installs, and in some other
+libraries that's a common cause of crashes. Sideloaded installs, other stores and dev builds get a
+store link instead. See [Store flows](/docs/concepts/store-flows).

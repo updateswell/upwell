@@ -1,0 +1,135 @@
+---
+title: Debugging and analytics
+description: Find out why Upwell decided what it did, and log decisions to your own analytics.
+icon: Bug
+---
+
+## explain()
+
+Every decision has a one-line `because`. `explain()` returns the whole trace, one line per rule the
+engine evaluated:
+
+```tsx
+const { decision, explain } = useAppUpdate();
+
+console.log(decision.because); // "required: build 290 < minimum 300"
+console.log(explain().join('\n'));
+```
+
+```text
+installed: android 2.9.0 (build 290), source play, runtime 2.9.0
+newer: policy latest 340 > installed build 290
+staleness: 5 days (Play)
+stranded: yes, runtime 2.9.0 != latest OTA runtime 3.4.0
+→ store.required: required: build 290 < minimum 300
+```
+
+### Reading a trace
+
+| Line | Tells you |
+| --- | --- |
+| `installed:` | What the device reported: version, build, install source, runtime |
+| `policy:` | Only when something's off: fetch failed (and whether a cached copy was used), no policy, no section for this platform |
+| `newer:` | Whether a newer build is known, and from where (policy, Play, App Store) |
+| `staleness:` | How old the update is, and the source |
+| `stranded:` | Whether the runtime matches `latestRuntimeVersion` |
+| `minimum:` / `escalation:` | Why it's not required |
+| `flow:` | Why a store link was used instead of a Play flow or the App Store sheet |
+| `ota:` | The OTA tool's status, e.g. `disabled (development build)` |
+| `rollout:` / `recommend:` / `snoozed:` / `capped:` | Why a recommendation isn't showing |
+| `→` | The final decision |
+
+## Debug logging
+
+```tsx
+<UpwellProvider policy={url} debug={__DEV__}>
+```
+
+With `debug`, every decision's trace is logged with `console.log`, and errors with `console.warn`
+(prefixed `[upwell]`).
+
+## The dev menu
+
+`<UpwellDevMenu />` shows the current decision and the live trace, and lets you jump between
+[simulated](/docs/guides/testing-and-simulation) states.
+
+## Analytics
+
+`onDecision` is called every time the engine runs, with the decision and its trace:
+
+```tsx
+<UpwellProvider
+  policy={url}
+  onDecision={({ decision }) => {
+    if (decision.kind === 'store.recommended' || decision.kind === 'store.required') {
+      analytics.track('update_prompt', {
+        kind: decision.kind,
+        reason: decision.reason,
+        flow: decision.flow,
+        target: decision.target.build,
+      });
+    }
+  }}
+  onError={(error, context) => Sentry.captureException(error, { tags: { upwell: context } })}
+/>
+```
+
+`onDecision` can fire several times per check (for example, on every progress update), so dedupe
+by `kind` if you count events. To track what users *do*, wrap the actions:
+
+```tsx
+const { startUpdate, dismiss } = useAppUpdate();
+
+const onUpdate = async () => {
+  analytics.track('update_accepted');
+  const result = await startUpdate(); // 'accepted' | 'canceled' | 'opened' | …
+  analytics.track('update_flow_result', { result });
+};
+```
+
+### Error contexts
+
+`onError(error, context)` receives one of these contexts:
+
+| Context | When |
+| --- | --- |
+| `reading installed info` | The native module failed (decision becomes `error`) |
+| `loading releases` | `releases.json` failed or was invalid |
+| `reading store info` | Play or the App Store lookup failed |
+| `checking for OTA updates`, `downloading the OTA update`, `applying the OTA update` | The OTA tool failed |
+| `starting the store update`, `installing the store update` | A store flow failed |
+| `caching`, `saving prompt history`, `reading update history`, `saving update history` | Device storage failed |
+
+Policy fetch errors don't go through `onError`. They're expected (offline users) and handled with the
+last known good copy. Read them from `state.policyError`.
+
+## Common questions
+
+<Accordions>
+<Accordion title="Why don't I see a prompt?">
+
+Read the trace. The usual causes, in order:
+
+1. `ota: …` is `ready` or `downloading`: an OTA update takes precedence over a recommendation.
+2. `rollout: bucket N is outside X%`.
+3. `recommend: update is N days old, waiting for recommendAfterDays M`. On iOS, `staleness: unknown`
+   means `latest.releasedAt` is missing.
+4. `snoozed:` or `capped:`, from earlier "Later" taps. Simulation has its own storage; reinstall to reset real snoozes.
+5. `store: Play has no update for this device yet`: Play hasn't rolled the build out to this device.
+
+</Accordion>
+<Accordion title="Why a store link instead of the Play dialog?">
+
+Look for a `flow:` line. Play flows only run for installs from Play, so `npx expo run:android` builds
+always use the store link. Use simulation, or internal app sharing.
+
+</Accordion>
+<Accordion title="The policy change didn't take effect">
+
+Checks on foreground are throttled to once a minute, and your CDN may cache the file. Look for a
+`policy:` line: if the new policy is invalid, Upwell keeps the last valid copy.
+
+</Accordion>
+</Accordions>
+
+More in [Troubleshooting](/docs/resources/troubleshooting).

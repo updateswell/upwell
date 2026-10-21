@@ -1,0 +1,80 @@
+---
+title: Forced updates
+description: Block old versions after a breaking API change, or give users a grace period first.
+icon: Lock
+---
+
+## Block everything below a version
+
+You shipped `3.0.0` with a new API, and the old API goes away next week. Raise `minimum`:
+
+```json title="policy.json"
+{
+  "schemaVersion": 1,
+  "android": {
+    "latest": { "version": "3.0.0", "build": 300 },
+    "minimum": { "version": "3.0.0", "build": 300 },
+    "requiredMessage": {
+      "title": "Update required",
+      "body": "This version can no longer place orders. Update to continue.",
+      "releaseNotesUrl": "https://example.com/changelog/3.0"
+    }
+  },
+  "ios": {
+    "appStoreId": "1234567890",
+    "latest": { "version": "3.0.0", "build": "1" },
+    "minimum": { "version": "3.0.0", "build": "1" }
+  }
+}
+```
+
+Installs below `minimum` get `store.required` with `reason: "belowMinimum"`:
+
+- **Android, installed from Play:** Play's immediate update flow (full screen, resumed if the user leaves).
+- **Everywhere else:** `<ForceUpdateScreen />` blocks the app with an "Update" button that opens the
+  store (the App Store sheet on iOS).
+
+Required updates ignore snoozes, prompt caps and rollout. `dismiss()` does nothing for them.
+
+<Callout type="warn" title="Ship first, then raise minimum">
+  Make sure the build is live in the store **before** you raise `minimum`, or users are blocked
+  with nothing to update to. On Android, Upwell checks that Play actually offers a build at or above
+  `minimum`, and falls back to the store link otherwise. The validator also rejects a `minimum` above `latest`.
+</Callout>
+
+## Give users a grace period
+
+Keep `minimum` where it is and escalate by age instead:
+
+```json
+"latest": { "version": "3.0.0", "build": 300, "releasedAt": "2026-10-14" },
+"recommendAfterDays": 0,
+"requireAfterDays": 7
+```
+
+Users get a recommendation right away and are required to update once the build is 7 days old
+(`reason: "stale"`). On Android, "7 days old" uses Play's staleness for this device when available,
+so users who learned about the update late get their full grace period.
+
+## Blocking only some users
+
+`minimum` and `requireAfterDays` apply to everyone below them. To block one platform only, set them in
+that platform's section. Rollout never limits required updates. That's deliberate: a required update
+that reaches only some users isn't required.
+
+## Writing your own blocking screen
+
+`isRequired` from `useAppUpdate()` is `true` for `store.required` and for a required update that's downloading:
+
+```tsx
+import { useAppUpdate } from 'upwell/react';
+
+export function UpdateGate({ children }: { children: React.ReactNode }) {
+  const { isRequired, decision, progress, startUpdate } = useAppUpdate();
+  if (!isRequired) return <>{children}</>;
+  if (decision.kind === 'store.downloading') return <Downloading progress={progress} />;
+  return <MustUpdate message={decision.kind === 'store.required' ? decision.message : null} onUpdate={startUpdate} />;
+}
+```
+
+Render `<UpwellUI force={false} />` if you keep the rest of the UI kit but replace the blocking screen.

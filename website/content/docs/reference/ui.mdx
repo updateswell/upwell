@@ -1,0 +1,98 @@
+---
+title: upwell/ui
+description: Themeable components for every update state, plus the dev menu.
+icon: LayoutTemplate
+---
+
+```ts
+import { UpwellUI, UpdatePrompt, ForceUpdateScreen, WhatsNew, UpwellThemeProvider } from 'upwell/ui';
+```
+
+Every component reads the current decision from the nearest `UpwellProvider` and renders nothing
+when it doesn't apply. They use React Native's `Animated` and `Modal`, with no Reanimated or other
+dependencies.
+
+## UpwellUI
+
+Renders whichever component the current decision needs. Place it once, as the last child of your root.
+
+```tsx
+<UpwellUI bottomOffset={insets.bottom + 16} />
+```
+
+<TypeTable
+  type={{
+    prompt: { type: 'boolean', default: 'true', description: 'Render UpdatePrompt.' },
+    progress: { type: 'boolean', default: 'true', description: 'Render DownloadProgressBanner.' },
+    restart: { type: 'boolean', default: 'true', description: 'Render RestartSnackbar.' },
+    force: { type: 'boolean', default: 'true', description: 'Render ForceUpdateScreen.' },
+    updated: { type: 'boolean', default: 'true', description: 'Render UpdatedSheet.' },
+    bottomOffset: { type: 'number', default: '24', description: 'Distance of the floating components from the bottom of the screen.' },
+    style: { type: 'StyleProp<ViewStyle>', description: 'Applied to the floating components.' },
+  }}
+/>
+
+## Components
+
+| Component | Shown for | Props |
+| --- | --- | --- |
+| `UpdatePrompt` | `store.recommended`: title, body, "Release notes" (when `releaseNotesUrl` is set), "Later", "Update" | `bottomOffset`, `style` |
+| `DownloadProgressBanner` | `store.downloading` (not required) | `bottomOffset`, `style` |
+| `RestartSnackbar` | `store.readyToInstall`, and `ota.ready` with `applyMode: "prompt"`, until dismissed | `bottomOffset`, `style` |
+| `ForceUpdateScreen` | `store.required`, and required downloads (with progress). Full-screen modal; the Android back button does nothing | `style` |
+| `UpdatedSheet` | Once after an OTA update with a `releases.json` entry was applied | `style` |
+| `WhatsNew` | Always: the release history for the running runtime, as a `FlatList` | `style`, `showTitle` (default `true`) |
+| `UpwellDevMenu` | Dev tool: a button per simulation scenario, "real device", and the live trace | `style`, `scenarios` |
+
+### WhatsNew
+
+```tsx
+export function WhatsNewScreen() {
+  return <WhatsNew style={{ flex: 1 }} showTitle={false} />;
+}
+```
+
+Shows "No updates yet for this version." when the history is empty.
+
+### UpwellDevMenu
+
+```tsx
+<UpwellDevMenu style={{ flex: 1 }} scenarios={['store.recommended', 'store.required', 'stranded']} />
+```
+
+`scenarios` defaults to every [simulation scenario](/docs/guides/testing-and-simulation#simulate).
+
+## Theming
+
+| Export | |
+| --- | --- |
+| `UpwellThemeProvider` | Props: `theme`, `light`, `dark`, `scheme`. See [Theming](/docs/guides/theming) |
+| `useUpwellTheme()` | The active `UpwellTheme` |
+| `lightTheme`, `darkTheme`, `defaultStrings` | The defaults |
+| `UpwellTheme`, `UpwellThemeOverride`, `UpwellColors`, `UpwellStrings` | Types |
+
+## Primitives
+
+The building blocks the kit is made of, for your own screens:
+
+| Export | Props |
+| --- | --- |
+| `UpwellButton` | `title`, `onPress`, `variant` (`'primary' \| 'secondary'`), `busy`, `testID`, `style` |
+| `UpwellText` | `variant` (`'title' \| 'body' \| 'muted'`), `style`, `numberOfLines`, `children` |
+| `ProgressBar` | `progress` (0–1, or `null` for indeterminate), `testID` |
+
+## Test IDs
+
+For your own tests (Jest, Detox, Maestro):
+
+| testID | Element |
+| --- | --- |
+| `upwell-update-prompt` | `UpdatePrompt` |
+| `upwell-prompt-update`, `upwell-prompt-later` | Its buttons |
+| `upwell-download-banner`, `upwell-download-progress` | `DownloadProgressBanner` and its bar |
+| `upwell-restart-snackbar` | `RestartSnackbar` |
+| `upwell-restart`, `upwell-restart-later` | Its buttons |
+| `upwell-force-update`, `upwell-force-update-button` | `ForceUpdateScreen` and its button |
+| `upwell-updated-sheet`, `upwell-updated-dismiss` | `UpdatedSheet` and its button |
+| `upwell-whats-new` | `WhatsNew` |
+| `upwell-sim-<scenario>` | `UpwellDevMenu` scenario buttons |

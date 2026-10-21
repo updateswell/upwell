@@ -1,0 +1,107 @@
+---
+title: Build your own UI
+description: Use the headless hooks to render updates with your own design system.
+icon: Paintbrush
+---
+
+The UI kit is optional. Everything it does goes through public hooks, so you can replace any piece,
+or all of it.
+
+## One component per decision
+
+```tsx title="UpdateUI.tsx"
+import { useAppUpdate } from 'upwell/react';
+
+export function UpdateUI() {
+  const { decision, progress, isBusy, isDismissed, startUpdate, dismiss } = useAppUpdate();
+
+  switch (decision.kind) {
+    case 'store.recommended':
+      return (
+        <Banner
+          title={decision.message?.title ?? 'Update available'}
+          body={decision.reason === 'stranded' ? 'Your version no longer receives fixes.' : decision.message?.body}
+          primary={{ label: 'Update', onPress: startUpdate, loading: isBusy }}
+          secondary={{ label: 'Later', onPress: dismiss }}
+        />
+      );
+    case 'store.downloading':
+      return decision.required ? <FullScreenProgress value={progress} /> : <ProgressToast value={progress} />;
+    case 'store.readyToInstall':
+      return isDismissed ? null : <Toast text="Update downloaded" action={{ label: 'Restart', onPress: startUpdate }} onClose={dismiss} />;
+    case 'ota.ready':
+      return decision.applyMode === 'prompt' && !isDismissed ? (
+        <Toast text="A new version is ready" action={{ label: 'Restart', onPress: startUpdate }} onClose={dismiss} />
+      ) : null;
+    case 'store.required':
+      return <BlockingScreen message={decision.message} onUpdate={startUpdate} loading={isBusy} />;
+    default:
+      return null;
+  }
+}
+```
+
+### Actions
+
+| Action | Does |
+| --- | --- |
+| `startUpdate()` | Whatever the decision calls for: the store flow, installing a downloaded update, or restarting into an OTA update |
+| `dismiss()` | "Later": snoozes a recommendation, hides a restart prompt for this session. Does nothing for required updates |
+| `startStoreUpdate(flow?)` | A specific store flow, e.g. `'storeLink'` |
+| `completeStoreUpdate()` | Installs a downloaded flexible update |
+| `applyOta()` | Restarts into a downloaded OTA update |
+| `openStore()` | Opens the store page, whatever the decision |
+| `check()` | Checks again now |
+
+Always use `isDismissed` for prompts the user can close: it's `true` once they dismissed the current
+decision this session.
+
+## Mixing with the UI kit
+
+`<UpwellUI />` takes flags to turn individual pieces off:
+
+```tsx
+<UpwellUI force={false} />                 {/* your own blocking screen */}
+<UpwellUI prompt={false} updated={false} /> {/* your own prompt and "Updated" sheet */}
+```
+
+Or render the pieces you want directly: `<RestartSnackbar />`, `<DownloadProgressBanner />`, … See the
+[UI kit reference](/docs/reference/ui).
+
+## "Updated" and "What's new"
+
+```tsx
+import { useUpdateHistory } from 'upwell/react';
+
+export function UpdatedToast() {
+  const { justUpdated, markSeen } = useUpdateHistory();
+  if (!justUpdated) return null;
+  return <Toast text={`Updated: ${justUpdated.notes}`} onClose={markSeen} />;
+}
+
+export function Changelog() {
+  const { history, current } = useUpdateHistory();
+  return history.map((r) => <ReleaseRow key={r.id} release={r} highlighted={r.id === current?.id} />);
+}
+```
+
+Call `markSeen()` when the user closes your "Updated" UI, or it shows again on the next launch.
+
+## A badge in settings
+
+```tsx
+function SettingsUpdateRow() {
+  const { decision, state, openStore } = useAppUpdate();
+  const target = decision.kind === 'upToDate' ? decision.snoozed?.target : 'target' in decision ? decision.target : null;
+  if (!target) return <Row title="Version" value={state.installed?.nativeVersion} />;
+  return <Row title="Update available" value={target.version ?? `build ${target.build}`} onPress={openStore} />;
+}
+```
+
+`decision.snoozed` keeps snoozed recommendations reachable from settings, even when no prompt is showing.
+
+## Reading everything
+
+`useUpwellState()` returns the controller's full state: `installed`, `policy`, `policyError`,
+`policyWarnings`, `store`, `ota`, `releases`, `trace`, `simulation` and more. See
+[`UpwellState`](/docs/reference/controller#upwellstate).

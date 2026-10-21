@@ -1,0 +1,52 @@
+---
+title: Config plugin
+description: Options for the Upwell Expo config plugin.
+icon: Settings
+---
+
+The config plugin is optional. Upwell autolinks and works without it.
+
+```json title="app.json"
+{
+  "expo": {
+    "plugins": [["upwell", { "playAppUpdateVersion": "2.1.0", "storeUrlQueries": true }]]
+  }
+}
+```
+
+## Options
+
+<TypeTable
+  type={{
+    playAppUpdateVersion: {
+      type: 'string',
+      default: '"2.1.0"',
+      description: 'Version of com.google.android.play:app-update. Written to gradle.properties as upwellPlayAppUpdateVersion.',
+    },
+    storeUrlQueries: {
+      type: 'boolean',
+      default: 'true',
+      description: 'Declares the market:// scheme (Android <queries>) and itms-apps / itms-beta (iOS LSApplicationQueriesSchemes), so Linking.canOpenURL() works for store URLs in your code. Upwell itself does not need it.',
+    },
+  }}
+/>
+
+Unknown options and malformed values fail the prebuild with an `[upwell]` error, so typos don't go unnoticed.
+
+## What it changes
+
+| Platform | Change |
+| --- | --- |
+| Android | `upwellPlayAppUpdateVersion=<version>` in `gradle.properties` (only when the option is set) |
+| Android | A `<queries>` entry for `android.intent.action.VIEW` with the `market` scheme |
+| iOS | `itms-apps` and `itms-beta` added to `LSApplicationQueriesSchemes` |
+
+No permissions are added on either platform.
+
+## Without the plugin
+
+In bare React Native apps, set the Play Core version in `android/gradle.properties`:
+
+```properties
+upwellPlayAppUpdateVersion=2.1.0
+```

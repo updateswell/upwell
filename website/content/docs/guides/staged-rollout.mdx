@@ -1,0 +1,61 @@
+---
+title: Staged rollout
+description: Prompt only a share of users for a new build while you watch crash rates.
+icon: ChartNoAxesColumnIncreasing
+---
+
+Set `rollout` to the percentage of installs that should see the recommendation:
+
+```json title="policy.json"
+{
+  "schemaVersion": 1,
+  "android": {
+    "latest": { "version": "3.5.0", "build": 350, "releasedAt": "2026-10-21" },
+    "rollout": 10
+  }
+}
+```
+
+Raise the number to widen the rollout: `10` → `50` → `100`. Users who were already in keep seeing
+the prompt (subject to snoozes and caps), and new users join.
+
+## How buckets work
+
+Each install gets a stable bucket from 0 to 99:
+
+```
+bucket = fnv1a(installationId + ":" + targetBuild) % 100
+in rollout = bucket < rollout
+```
+
+- **`installationId`** is a random id created on first launch and stored on the device. It never leaves the device.
+- **The target build is part of the hash**, so each release reaches a *different* 10%. The same early
+  users aren't always your guinea pigs.
+- The hash is deterministic on every JavaScript engine, so the result never flips between launches.
+
+The trace shows the bucket:
+
+```
+rollout: bucket 73 is outside 10%
+```
+
+## What rollout doesn't limit
+
+- **Required updates** (`minimum`, `requireAfterDays`, stranded escalation) reach everyone.
+- **Stranded installs** are recommended regardless of rollout, because they're missing OTA updates.
+- **OTA updates** aren't affected. Stage those with your OTA tool (e.g. EAS Update rollouts).
+
+## Combine it with Play's staged rollout
+
+Upwell's rollout controls who's *prompted*. Play's staged rollout controls who *can install* the
+build. On Android, also stage the release in Play Console: when Play hasn't rolled the build out to a
+device, Upwell doesn't prompt it, because the store page would show "Open" instead of "Update".
+
+On iOS, App Store Connect's phased release only affects automatic updates. Users can still update
+manually, so Upwell's `rollout` is how you limit prompts there.
+
+## Halting a rollout
+
+Something's wrong with `3.5.0`? Set `rollout` to `0`. Prompts stop on the next check, with no
+release needed. On Android, also halt the rollout in Play Console: Upwell learns about newer builds
+from Play too, so a build Play still offers can come back as a recommendation once `rollout` is raised again.
