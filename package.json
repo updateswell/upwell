@@ -84,7 +84,7 @@
   },
   "author": "ommgh <om.works01@gmail.com> (https://github.com/ommgh)",
   "license": "MIT",
-  "homepage": "https://github.com/updateswell/upwell#readme",
+  "homepage": "https://upwell-docs.vercel.app",
   "peerDependencies": {
     "expo": "*",
     "expo-constants": "*",

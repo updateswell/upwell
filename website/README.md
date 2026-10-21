@@ -1,7 +1,8 @@
 # Upwell docs
 
 The documentation site for [Upwell](https://github.com/updateswell/upwell), built with
-[Fumadocs](https://fumadocs.dev) on Next.js. It's deployed separately from the library.
+[Fumadocs](https://fumadocs.dev) on Next.js. It's deployed separately from the library, as the `upwell-docs` Vercel project:
+<https://upwell-docs.vercel.app>.
 
 ```bash
 npm install

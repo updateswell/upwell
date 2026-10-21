@@ -16,6 +16,8 @@ and an "Updated" sheet, from a `releases.json` you publish next to your policy.
 
 > **Status: 0.1 (pre-release).** The API may change before 1.0.
 
+📖 **Documentation: [upwell-docs.vercel.app](https://upwell-docs.vercel.app/docs)**
+
 - [Why](#why)
 - [Install](#install)
 - [Quick start](#quick-start)
@@ -26,6 +28,7 @@ and an "Updated" sheet, from a `releases.json` you publish next to your policy.
 - [Transparent OTA](#transparent-ota)
 - [Testing and simulation](#testing-and-simulation)
 - [Recipes](docs/recipes.md)
+- [Full documentation](https://upwell-docs.vercel.app/docs)
 
 ## Why
 

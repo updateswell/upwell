@@ -62,3 +62,6 @@ coverage/
 *.tsbuildinfo
 *.tgz
 .kotlin/
+
+# Vercel
+.vercel

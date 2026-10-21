@@ -1,0 +1,14 @@
+# Only the docs site (website/) and the files it includes are deployed.
+node_modules
+**/node_modules
+android
+ios
+example
+build
+plugin
+src
+coverage
+.changeset
+.github
+website/.next
+website/.source
