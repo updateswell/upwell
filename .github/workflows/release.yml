@@ -13,6 +13,9 @@ permissions:
 
 jobs:
   release:
+    # Off until npm is set up: add an NPM_TOKEN secret, then set the RELEASE_ENABLED
+    # repository variable to "true".
+    if: ${{ vars.RELEASE_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -50,7 +50,7 @@ jobs:
 
   ios:
     name: iOS (compile module)
-    runs-on: macos-15
+    runs-on: macos-26
     needs: js
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +66,13 @@ jobs:
       - name: Build for simulator
         working-directory: example/ios
         run: |
+          xcodebuild -version
           set -o pipefail
           xcodebuild -workspace upwellexample.xcworkspace -scheme upwellexample \
             -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO build | tail -50
+            CODE_SIGNING_ALLOWED=NO build > build.log 2>&1 || {
+              grep -E "error:|warning: .*Upwell" build.log | sort -u | head -50
+              tail -30 build.log
+              exit 1
+            }
+          grep -E "Upwell.*warning:" build.log | sort -u | head -30 || true
