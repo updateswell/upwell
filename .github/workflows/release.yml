@@ -81,6 +81,8 @@ jobs:
   publish:
     needs: pack
     runs-on: ubuntu-latest
+    # Must match the environment set on the npm trusted publisher.
+    environment: upwell-gh-ci
     permissions:
       contents: write # git tags and GitHub releases
       id-token: write # npm trusted publishing (OIDC), with provenance
