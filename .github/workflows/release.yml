@@ -1,40 +1,98 @@
 name: Release
 
+# Versions packages (opens the "chore: version packages" PR) and, once that PR is merged, publishes
+# to npm with trusted publishing (OIDC): no npm token. The trusted publisher on npmjs.com must point
+# at this file (release.yml) in updateswell/upwell. Based on https://changesets.dev/guide/automating
+
 on:
   push:
     branches: [main]
 
-concurrency: release-${{ github.ref }}
+permissions: {}
 
-permissions:
-  contents: write
-  pull-requests: write
-  id-token: write
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  release:
-    # Off until npm is set up: add an NPM_TOKEN secret, then set the RELEASE_ENABLED
-    # repository variable to "true".
+  select-mode:
+    # Kill switch: set the RELEASE_ENABLED repository variable to anything but "true" to pause.
     if: ${{ vars.RELEASE_ENABLED == 'true' }}
     runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.select-mode.outputs.mode }}
+      publish-plan-artifact-id: ${{ steps.select-mode.outputs.publish-plan-artifact-id }}
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
         with:
-          node-version: 22
-          cache: npm
-          registry-url: https://registry.npmjs.org
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
       - run: npm ci
-      - uses: changesets/action@v1
+      - id: select-mode
+        uses: changesets/action/select-mode@v2
+
+  version:
+    if: needs.select-mode.outputs.mode == 'version'
+    needs: select-mode
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # commit version changes
+      pull-requests: write # open the version PR
+    steps:
+      - uses: actions/checkout@v7
         with:
-          publish: npm run release
-          version: npm run version-packages
-          commit: 'chore: version packages'
-          title: 'chore: version packages'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          # setup-node's .npmrc reads the token from NODE_AUTH_TOKEN.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          # npm only accepts provenance from public repositories.
-          NPM_CONFIG_PROVENANCE: ${{ !github.event.repository.private }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci
+      - uses: changesets/action/version@v2
+        with:
+          commit-message: 'chore: version packages'
+          pr-title: 'chore: version packages'
+
+  pack:
+    if: needs.select-mode.outputs.mode == 'publish'
+    needs: select-mode
+    runs-on: ubuntu-latest
+    outputs:
+      pack-dir-artifact-id: ${{ steps.pack.outputs.pack-dir-artifact-id }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci # `prepare` builds the package
+      - id: pack
+        uses: changesets/action/pack@v2
+        with:
+          publish-plan-artifact-id: ${{ needs.select-mode.outputs.publish-plan-artifact-id }}
+
+  publish:
+    needs: pack
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # git tags and GitHub releases
+      id-token: write # npm trusted publishing (OIDC), with provenance
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci
+      - uses: changesets/action/publish@v2
+        with:
+          pack-dir-artifact-id: ${{ needs.pack.outputs.pack-dir-artifact-id }}
