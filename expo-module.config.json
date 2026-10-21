@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["UpwellModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.upwell.UpwellModule"]
+  }
+}

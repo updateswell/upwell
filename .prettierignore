@@ -1,0 +1,8 @@
+build
+plugin/build
+example
+coverage
+node_modules
+.changeset
+PLAN.md
+CHANGELOG.md

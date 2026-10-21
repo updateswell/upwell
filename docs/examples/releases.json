@@ -1,0 +1,22 @@
+{
+  "$schema": "https://unpkg.com/upwell/schemas/releases.schema.json",
+  "schemaVersion": 1,
+  "releases": [
+    {
+      "id": "2026-10-21.1",
+      "platforms": ["ios", "android"],
+      "runtimeVersion": "3.4.0",
+      "kind": "fix",
+      "notes": "Fixed a crash at checkout on iOS 27.",
+      "publishedAt": "2026-10-21T10:00:00Z"
+    },
+    {
+      "id": "2026-10-19.1",
+      "platforms": ["ios", "android"],
+      "runtimeVersion": "3.4.0",
+      "kind": "content",
+      "notes": "Updated the Diwali offers banner.",
+      "publishedAt": "2026-10-19T08:30:00Z"
+    }
+  ]
+}

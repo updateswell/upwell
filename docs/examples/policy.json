@@ -1,0 +1,33 @@
+{
+  "$schema": "https://unpkg.com/upwell/schemas/policy.schema.json",
+  "schemaVersion": 1,
+  "android": {
+    "latest": { "version": "3.4.0", "build": 340, "releasedAt": "2026-10-18" },
+    "minimum": { "version": "3.0.0", "build": 300 },
+    "recommendAfterDays": 2,
+    "requireAfterDays": null,
+    "rollout": 100,
+    "ota": {
+      "latestRuntimeVersion": "3.4.0",
+      "applyMode": "nextLaunch",
+      "strandedRequireAfterDays": 14
+    },
+    "message": {
+      "title": "Update available",
+      "body": "This version fixes checkout on older devices.",
+      "releaseNotesUrl": "https://example.com/changelog"
+    }
+  },
+  "ios": {
+    "appStoreId": "1234567890",
+    "latest": { "version": "3.4.0", "build": "1", "releasedAt": "2026-10-18" },
+    "minimum": { "version": "3.0.0", "build": "1" },
+    "recommendAfterDays": 2,
+    "rollout": 100,
+    "ota": {
+      "latestRuntimeVersion": "3.4.0",
+      "applyMode": "prompt",
+      "strandedRequireAfterDays": 14
+    }
+  }
+}

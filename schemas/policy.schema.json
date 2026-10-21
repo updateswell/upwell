@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://unpkg.com/upwell/schemas/policy.schema.json",
+  "title": "Upwell policy",
+  "description": "Remote update policy read by Upwell on launch and foreground.",
+  "type": "object",
+  "required": ["schemaVersion"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "android": { "$ref": "#/definitions/platformPolicy" },
+    "ios": {
+      "allOf": [{ "$ref": "#/definitions/platformPolicy" }],
+      "properties": {
+        "appStoreId": {
+          "type": "string",
+          "pattern": "^[0-9]+$",
+          "description": "Numeric App Store id, used for the in-app App Store sheet."
+        },
+        "country": {
+          "type": "string",
+          "pattern": "^[a-zA-Z]{2}$",
+          "description": "Storefront country for the App Store lookup. Default: device region."
+        }
+      }
+    }
+  },
+  "definitions": {
+    "days": {
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "build": {
+      "description": "versionCode / CFBundleVersion. Compared numerically per dot segment.",
+      "oneOf": [
+        { "type": "integer", "minimum": 0 },
+        { "type": "string", "pattern": "^v?[0-9]+(\\.[0-9]+)*([-+][0-9A-Za-z.+-]*)?$" }
+      ]
+    },
+    "versionRef": {
+      "type": "object",
+      "required": ["version", "build"],
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^v?[0-9]+(\\.[0-9]+)*([-+][0-9A-Za-z.+-]*)?$",
+          "description": "Display version, e.g. \"3.4.0\"."
+        },
+        "build": { "$ref": "#/definitions/build" },
+        "releasedAt": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}",
+          "description": "ISO date the version shipped. Drives staleness on iOS."
+        }
+      }
+    },
+    "platformPolicy": {
+      "type": "object",
+      "properties": {
+        "latest": {
+          "$ref": "#/definitions/versionRef",
+          "description": "Newest version in the store."
+        },
+        "minimum": {
+          "$ref": "#/definitions/versionRef",
+          "description": "Installs below this must update (blocking)."
+        },
+        "recommendAfterDays": {
+          "$ref": "#/definitions/days",
+          "description": "Recommend an update once it is this many days old. Default 0."
+        },
+        "requireAfterDays": {
+          "$ref": "#/definitions/days",
+          "description": "Require an update once it is this many days old. Default: never."
+        },
+        "rollout": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Percentage of installs that see store prompts. Default 100."
+        },
+        "ota": {
+          "type": "object",
+          "properties": {
+            "latestRuntimeVersion": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Runtime the newest OTA updates target. Installs on another runtime are stranded."
+            },
+            "applyMode": {
+              "enum": ["nextLaunch", "prompt", "immediate"],
+              "description": "When a downloaded OTA update is applied. Default nextLaunch."
+            },
+            "strandedRequireAfterDays": {
+              "$ref": "#/definitions/days",
+              "description": "Days after which a stranded install must update."
+            }
+          }
+        },
+        "message": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string", "minLength": 1 },
+            "body": { "type": "string", "minLength": 1 },
+            "releaseNotesUrl": { "type": "string", "minLength": 1 }
+          }
+        },
+        "storeUrl": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Overrides the store URL used for store-link prompts."
+        }
+      }
+    }
+  }
+}
