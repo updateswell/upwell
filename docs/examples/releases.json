@@ -1,5 +1,5 @@
 {
-  "$schema": "https://unpkg.com/upwell/schemas/releases.schema.json",
+  "$schema": "https://upwell.run/schemas/releases.schema.json",
   "schemaVersion": 1,
   "releases": [
     {

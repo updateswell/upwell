@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://unpkg.com/upwell/schemas/releases.schema.json",
+  "$id": "https://upwell.run/schemas/releases.schema.json",
   "title": "Upwell releases",
   "description": "Describes every OTA release, for in-app \"What's new\" and App Review notes.",
   "type": "object",

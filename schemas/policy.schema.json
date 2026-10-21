@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://unpkg.com/upwell/schemas/policy.schema.json",
+  "$id": "https://upwell.run/schemas/policy.schema.json",
   "title": "Upwell policy",
   "description": "Remote update policy read by Upwell on launch and foreground.",
   "type": "object",

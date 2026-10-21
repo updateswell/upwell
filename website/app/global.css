@@ -48,6 +48,16 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* Monospace spaces are a full character wide; pull words a little closer. Code keeps its spacing. */
+body {
+  word-spacing: -0.12em;
+}
+pre,
+code,
+kbd {
+  word-spacing: normal;
+}
+
 html > body[data-scroll-locked] {
   margin-right: 0px !important;
   --removed-body-scroll-bar-size: 0px !important;
@@ -102,4 +112,11 @@ html > body[data-scroll-locked] {
 /* Tighter tracking for large monospace headings. */
 .upwell-display {
   letter-spacing: -0.04em;
+  word-spacing: -0.28em;
+}
+
+/* Social image cards (/card/*) are captured at exact sizes: no scrollbar gutter. */
+html:has(#card) {
+  scrollbar-gutter: auto;
+  overflow: hidden;
 }

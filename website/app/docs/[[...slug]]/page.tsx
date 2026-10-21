@@ -11,7 +11,8 @@ import { notFound } from 'next/navigation';
 import { getMDXComponents } from '@/components/mdx';
 import type { Metadata } from 'next';
 import { createRelativeLink } from 'fumadocs-ui/mdx';
-import { getPageImageUrl, getPageMarkdownUrl, gitConfig } from '@/lib/shared';
+import { docsHref, getPageImageUrl, getPageMarkdownUrl, gitConfig } from '@/lib/shared';
+import type { ComponentProps } from 'react';
 
 export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
   const params = await props.params;
@@ -19,6 +20,11 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
   if (!page) notFound();
 
   const MDX = page.data.body;
+  const RelativeLink = createRelativeLink(source, page);
+  // Content links are written as /docs/…; map them to this deployment's docs URLs.
+  const Link = ({ href, ...props }: ComponentProps<'a'>) => (
+    <RelativeLink href={href ? docsHref(href) : href} {...props} />
+  );
   const markdownUrl = getPageMarkdownUrl(page).url;
 
   // The page title is the only h1; drop h1s from included files (e.g. CHANGELOG.md) from the TOC.
@@ -39,7 +45,7 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
         <MDX
           components={getMDXComponents({
             // this allows you to link to other pages with relative file paths
-            a: createRelativeLink(source, page),
+            a: Link,
           })}
         />
       </DocsBody>

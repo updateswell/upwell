@@ -21,7 +21,16 @@ interface Particle {
  * The Upwell mark as ordered-dither pixels: the shape is shaded with a soft light from the top
  * left and a halo of dust, and pixels drift up out of the stack. Drawn in the current text color.
  */
-export function DitherLogo({ cell = 3, className }: { cell?: number; className?: string }) {
+export function DitherLogo({
+  cell = 3,
+  still = false,
+  className,
+}: {
+  cell?: number;
+  /** Render one fixed frame, with pixels already rising (for static images). */
+  still?: boolean;
+  className?: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -112,10 +121,7 @@ export function DitherLogo({ cell = 3, className }: { cell?: number; className?:
       }
     }
 
-    function step(t: number) {
-      raf = requestAnimationFrame(step);
-      if (!visible || t - last < 50) return; // ~20 fps is plenty for pixels
-      last = t;
+    function advance() {
       if (particles.length < cols * 0.35 && Math.random() < 0.6) particles.push(spawn());
       for (const p of particles) {
         p.y -= p.vy;
@@ -123,6 +129,13 @@ export function DitherLogo({ cell = 3, className }: { cell?: number; className?:
         p.life -= 0.006 + p.vy * 0.01;
       }
       particles = particles.filter((p) => p.life > 0 && p.y > 0);
+    }
+
+    function step(t: number) {
+      raf = requestAnimationFrame(step);
+      if (!visible || t - last < 50) return; // ~20 fps is plenty for pixels
+      last = t;
+      advance();
       draw(t);
     }
 
@@ -140,6 +153,12 @@ export function DitherLogo({ cell = 3, className }: { cell?: number; className?:
     img.onload = () => {
       if (disposed) return;
       layout();
+      if (still) {
+        for (let i = 0; i < 160; i++) advance();
+        draw(0);
+        canvas.dataset.ready = 'true';
+        return;
+      }
       draw(0);
       resize.observe(canvas);
       io.observe(canvas);
@@ -154,7 +173,7 @@ export function DitherLogo({ cell = 3, className }: { cell?: number; className?:
       io.disconnect();
       themeObserver.disconnect();
     };
-  }, [cell]);
+  }, [cell, still]);
 
   return <canvas ref={canvasRef} aria-hidden className={className} />;
 }

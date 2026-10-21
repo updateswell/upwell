@@ -14,6 +14,12 @@ A pixel-art arrow rising out of a stack of layers: updates rising up from the bi
 | `logo-white.svg` / `logo-white.png` | On dark backgrounds (transparent) |
 | `logo-on-white.png` / `logo-on-black.png` | 1024×1024 squares with a background: avatars, app icons, social cards |
 | `favicon.svg` | Square favicon that switches between black and white with the OS color scheme |
+| `banner-light.png` / `banner-dark.png` | README banner (1280×400 @2x), for GitHub's light and dark themes |
+| `og.png` | Link preview for upwell.run (1200×630) |
+| `social-preview.png` | GitHub repository social preview (1280×640) |
+
+The banners and social images are rendered from `website/app/card/[format]` with
+`npm run social` in `website/`, so edit the template and re-render rather than editing the PNGs.
 
 - The mark is pixel art: always scale it, never redraw or smooth it. Below 16 px, use the square
   variant instead of the bare mark.
@@ -66,7 +72,7 @@ Neutral scale for anything else: `50 #FAFAFA` · `100 #F5F5F5` · `200 #E5E5E5` 
 
 ## Where it's used
 
-- Docs site (`website/`): tokens in `app/global.css`, font in `app/layout.tsx`, logo in `public/`
-- README header
+- upwell.run and docs.upwell.run (`website/`): tokens in `app/global.css`, font in `app/layout.tsx`, logo in `public/`
+- README banner, link previews, GitHub social preview
 - Example app icon and splash (`example/assets/`)
 - UI kit defaults (`src/ui/theme.tsx`): monochrome light and dark themes

@@ -5,9 +5,8 @@ import { CopyCommand } from '@/components/home/copy-command';
 import { DitherLogo } from '@/components/home/dither-logo';
 import { DitherBand } from '@/components/home/dither-band';
 import { Logo } from '@/lib/layout.shared';
-import { gitConfig, npmUrl } from '@/lib/shared';
-
-const githubUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`;
+import { SiteHeader } from '@/components/home/site-header';
+import { docsHref, githubUrl, npmUrl } from '@/lib/shared';
 
 /* ─── Building blocks ──────────────────────────────────────────────────── */
 
@@ -25,7 +24,7 @@ function Row({ children, className = '' }: { children: ReactNode; className?: st
 function PillLink({ href, children, solid = false }: { href: string; children: ReactNode; solid?: boolean }) {
   return (
     <Link
-      href={href}
+      href={docsHref(href)}
       className={
         solid
           ? 'inline-flex items-center gap-1.5 rounded-full bg-fd-primary px-5 py-2.5 text-sm font-medium text-fd-primary-foreground shadow-sm transition-opacity hover:opacity-85'
@@ -85,6 +84,8 @@ export default function HomePage() {
   return (
     <main className="flex flex-1 flex-col overflow-x-clip">
       <div className="relative mx-auto w-full max-w-6xl border-x">
+        <SiteHeader />
+
         {/* Hero */}
         <section className="relative grid min-w-0 items-center gap-8 px-6 pt-16 pb-10 md:grid-cols-[1.1fr_1fr] md:px-12 md:pt-24">
           <div className="relative z-10 flex min-w-0 flex-col items-start gap-6">
@@ -92,7 +93,9 @@ export default function HomePage() {
               v0.1 · React Native · Expo
             </span>
             <h1 className="upwell-display text-[2.6rem] leading-[1.05] font-medium sm:text-6xl">
-              Updates that rise up on their own.
+              Updates That <br className="hidden md:inline" />
+              Rise Up On <br className="hidden md:inline" />
+              Their Own.
             </h1>
             <p className="max-w-md text-[15px] leading-relaxed text-fd-muted-foreground">
               One policy decides, on every launch, whether a user needs an OTA update, a new store build, or
@@ -241,7 +244,7 @@ export default function HomePage() {
                 <p className="mt-1 text-sm leading-relaxed text-fd-muted-foreground">
                   After a native change, old binaries stop getting OTA updates and nothing tells them. Upwell
                   notices and moves them to the store.{' '}
-                  <Link href="/docs/concepts/stranded-installs" className="text-fd-foreground underline underline-offset-4">
+                  <Link href={docsHref('/docs/concepts/stranded-installs')} className="text-fd-foreground underline underline-offset-4">
                     How it works
                   </Link>
                 </p>
@@ -378,7 +381,7 @@ export default function HomePage() {
             <div key={title as string} className="flex flex-col gap-2">
               <Label>{title as string}</Label>
               {(links as string[][]).map(([text, href]) => (
-                <Link key={text} href={href!} className="text-fd-muted-foreground transition-colors hover:text-fd-foreground">
+                <Link key={text} href={docsHref(href!)} className="text-fd-muted-foreground transition-colors hover:text-fd-foreground">
                   {text}
                 </Link>
               ))}

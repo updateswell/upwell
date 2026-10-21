@@ -1,5 +1,5 @@
 {
-  "$schema": "https://unpkg.com/upwell/schemas/policy.schema.json",
+  "$schema": "https://upwell.run/schemas/policy.schema.json",
   "schemaVersion": 1,
   "android": {
     "latest": { "version": "3.4.0", "build": 340, "releasedAt": "2026-10-18" },

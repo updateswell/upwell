@@ -1,32 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isMarkdownPreferred, rewritePath } from 'fumadocs-core/negotiation';
-import { docsContentRoute, docsRoute } from '@/lib/shared';
+import { docsContentRoute, docsUrl, siteMode } from '@/lib/shared';
 
-const { rewrite: rewriteDocs } = rewritePath(
-  `${docsRoute}{/*path}`,
-  `${docsContentRoute}{/*path}/content.md`,
-);
-const { rewrite: rewriteSuffix } = rewritePath(
-  `${docsRoute}{/*path}.md`,
-  `${docsContentRoute}{/*path}/content.md`,
-);
+// Docs pages always live under /docs internally; see `siteMode` for how they are exposed.
+const { rewrite: rewriteDocs } = rewritePath('/docs{/*path}', `${docsContentRoute}{/*path}/content.md`);
+const { rewrite: rewriteSuffix } = rewritePath('/docs{/*path}.md', `${docsContentRoute}{/*path}/content.md`);
+
+/** Paths that are not docs pages: framework, API, generated files and public assets. */
+const NOT_DOCS = /^\/(_next|api|og|llms\.mdx|llms\.txt|llms-full\.txt|card|schemas)(\/|$)|\.(svg|png|ico|txt|xml|json|webmanifest)$/;
+
+function isDocsPath(path: string) {
+  return path === '/docs' || path.startsWith('/docs/');
+}
 
 export default function proxy(request: NextRequest) {
-  const result = rewriteSuffix(request.nextUrl.pathname);
-  if (result) {
-    return NextResponse.rewrite(new URL(result, request.nextUrl));
+  const url = request.nextUrl;
+  let path = url.pathname;
+
+  if (siteMode === 'site' && isDocsPath(path)) {
+    // upwell.run/docs/x → docs.upwell.run/x
+    return NextResponse.redirect(`${docsUrl}${path.slice('/docs'.length) || '/'}${url.search}`, 308);
   }
 
-  if (isMarkdownPreferred(request)) {
-    const result = rewriteDocs(request.nextUrl.pathname);
+  if (siteMode === 'docs') {
+    if (isDocsPath(path)) {
+      // Old URLs (docs.upwell.run/docs/x, upwell-docs.vercel.app/docs/x) → /x
+      return NextResponse.redirect(new URL(`${path.slice('/docs'.length) || '/'}${url.search}`, url), 308);
+    }
+    if (!NOT_DOCS.test(path)) path = `/docs${path === '/' ? '' : path}`;
+  }
 
-    if (result) {
-      return NextResponse.rewrite(new URL(result, request.nextUrl), {
+  const suffix = rewriteSuffix(path);
+  if (suffix) return NextResponse.rewrite(new URL(suffix, url));
+
+  if (isMarkdownPreferred(request)) {
+    const markdown = rewriteDocs(path);
+    if (markdown) {
+      return NextResponse.rewrite(new URL(markdown, url), {
         // this URL has two representations, selected by `Accept`
         headers: { Vary: 'Accept' },
       });
     }
   }
 
+  if (path !== url.pathname) return NextResponse.rewrite(new URL(`${path}${url.search}`, url));
   return NextResponse.next();
 }
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image).*)'],
+};

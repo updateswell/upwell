@@ -1,7 +1,7 @@
 # Upwell: Update Orchestrator for React Native / Expo — Plan
 
 > Name: **Upwell**: updates that rise up on their own. npm: `@upwell` org ✅ claimed (2026-10-21) · unscoped `upwell` still to publish (M0)
-> Status: M0–M5 implemented, `upwell@0.1.0` on npm, docs site live at https://upwell-docs.vercel.app (Fumadocs, `website/`). M6 remaining: Play internal sharing + TestFlight verification, announce · Last updated: 2026-10-21
+> Status: M0–M5 implemented, `upwell@0.1.0` on npm, site live at https://upwell.run, docs at https://docs.upwell.run (Fumadocs, `website/`). M6 remaining: Play internal sharing + TestFlight verification, announce · Last updated: 2026-10-21
 
 ## 1. Problem
 

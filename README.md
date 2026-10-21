@@ -1,11 +1,9 @@
-<p align="center">
+<a href="https://upwell.run">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/logo-white.svg">
-    <img src="assets/brand/logo-black.svg" alt="Upwell" height="120">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/banner-dark.png">
+    <img src="assets/brand/banner-light.png" alt="Upwell: updates that rise up on their own. Update orchestrator for React Native and Expo.">
   </picture>
-</p>
-
-<h1 align="center">Upwell</h1>
+</a>
 
 **Updates that rise up on their own.** One library that decides, on every launch and foreground,
 what kind of update a React Native / Expo user needs, and drives it end to end:
@@ -23,7 +21,7 @@ and an "Updated" sheet, from a `releases.json` you publish next to your policy.
 
 > **Status: 0.1 (pre-release).** The API may change before 1.0.
 
-📖 **Documentation: [upwell-docs.vercel.app](https://upwell-docs.vercel.app/docs)**
+📖 **Documentation: [docs.upwell.run](https://docs.upwell.run)**
 
 - [Why](#why)
 - [Install](#install)
@@ -35,7 +33,7 @@ and an "Updated" sheet, from a `releases.json` you publish next to your policy.
 - [Transparent OTA](#transparent-ota)
 - [Testing and simulation](#testing-and-simulation)
 - [Recipes](docs/recipes.md)
-- [Full documentation](https://upwell-docs.vercel.app/docs)
+- [Full documentation](https://docs.upwell.run)
 
 ## Why
 
@@ -78,7 +76,7 @@ The config plugin is optional:
 
    ```json
    {
-     "$schema": "https://unpkg.com/upwell/schemas/policy.schema.json",
+     "$schema": "https://upwell.run/schemas/policy.schema.json",
      "schemaVersion": 1,
      "android": {
        "latest": { "version": "3.4.0", "build": 340, "releasedAt": "2026-10-18" },
