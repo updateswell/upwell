@@ -1,4 +1,11 @@
-# Upwell
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/logo-white.svg">
+    <img src="assets/brand/logo-black.svg" alt="Upwell" height="120">
+  </picture>
+</p>
+
+<h1 align="center">Upwell</h1>
 
 **Updates that rise up on their own.** One library that decides, on every launch and foreground,
 what kind of update a React Native / Expo user needs, and drives it end to end:

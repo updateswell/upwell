@@ -64,18 +64,19 @@ export const defaultStrings: UpwellStrings = {
   kind: { fix: 'Fix', content: 'Content', feature: 'Feature' },
 };
 
+/** Monochrome, per the Upwell design system (assets/brand/README.md). */
 export const lightTheme: UpwellTheme = {
   colors: {
     background: '#FFFFFF',
-    surface: '#F4F5F7',
-    text: '#111418',
-    mutedText: '#5C6370',
-    primary: '#1F6FEB',
-    onPrimary: '#FFFFFF',
-    border: '#DDE1E6',
+    surface: '#F5F5F5',
+    text: '#0A0A0A',
+    mutedText: '#737373',
+    primary: '#0A0A0A',
+    onPrimary: '#FAFAFA',
+    border: '#E5E5E5',
     overlay: 'rgba(0, 0, 0, 0.4)',
-    progressTrack: '#DDE1E6',
-    kind: { fix: '#2DA44E', content: '#8250DF', feature: '#BF8700' },
+    progressTrack: '#E5E5E5',
+    kind: { fix: '#525252', content: '#737373', feature: '#0A0A0A' },
   },
   radius: 12,
   spacing: 16,
@@ -85,16 +86,16 @@ export const lightTheme: UpwellTheme = {
 export const darkTheme: UpwellTheme = {
   ...lightTheme,
   colors: {
-    background: '#0D1117',
-    surface: '#161B22',
-    text: '#E6EDF3',
-    mutedText: '#8B949E',
-    primary: '#4C8DFF',
-    onPrimary: '#0D1117',
-    border: '#30363D',
+    background: '#0A0A0A',
+    surface: '#171717',
+    text: '#FAFAFA',
+    mutedText: '#A3A3A3',
+    primary: '#FAFAFA',
+    onPrimary: '#0A0A0A',
+    border: '#262626',
     overlay: 'rgba(0, 0, 0, 0.6)',
-    progressTrack: '#30363D',
-    kind: { fix: '#3FB950', content: '#A371F7', feature: '#D29922' },
+    progressTrack: '#262626',
+    kind: { fix: '#404040', content: '#525252', feature: '#737373' },
   },
 };
 
