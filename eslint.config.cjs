@@ -6,4 +6,5 @@ module.exports = defineConfig([
   { ignores: ['build', 'plugin/build', 'example', 'coverage', '**/node_modules'] },
   ...universe,
   ...universeWeb,
+  { rules: { 'no-void': ['warn', { allowAsStatement: true }] } },
 ]);
