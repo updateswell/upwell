@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
 
 import type { OtaAdapter, OtaCheckResult, OtaRuntime } from '../ota/types';
@@ -5,6 +6,15 @@ import type { OtaAdapter, OtaCheckResult, OtaRuntime } from '../ota/types';
 export interface ExpoUpdatesAdapterOptions {
   /** Check for updates in development too (they are always off in dev builds). Default false. */
   checkInDev?: boolean;
+}
+
+/**
+ * expo-updates reports an empty runtime in debug builds (updates are off there). The runtime the
+ * binary was configured with still tells whether it is stranded, so fall back to it.
+ */
+function configuredRuntime(): string | null {
+  const rv: unknown = Constants?.expoConfig?.runtimeVersion;
+  return typeof rv === 'string' && rv.length > 0 ? rv : null;
 }
 
 /** EAS Update puts the update group id in the manifest metadata. */
@@ -21,7 +31,7 @@ export function expoUpdatesAdapter(options: ExpoUpdatesAdapterOptions = {}): Ota
     getRuntime(): OtaRuntime {
       const ids = [Updates.updateId, groupId(Updates.manifest)].filter((id): id is string => !!id);
       return {
-        runtimeVersion: Updates.runtimeVersion ?? null,
+        runtimeVersion: Updates.runtimeVersion || configuredRuntime(),
         updateId: Updates.updateId ?? null,
         updateIds: ids,
         isEmbedded: Updates.isEmbeddedLaunch,

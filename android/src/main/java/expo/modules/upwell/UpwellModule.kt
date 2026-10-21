@@ -91,7 +91,7 @@ class UpwellModule : Module() {
 
     Function("setPlaySimulation") { config: Map<String, Any?>? ->
       simulation?.dispose()
-      simulation = config?.let { PlaySimulation(context, it) }
+      simulation = config?.let { PlaySimulation(context, it) { state -> sendEvent(INSTALL_STATE_EVENT, state) } }
       // Re-register the listener on whichever manager is now active.
       manager()
       simulation != null
@@ -155,8 +155,10 @@ class UpwellModule : Module() {
   private fun start(activity: Activity, info: AppUpdateInfo, type: Int, promise: Promise) {
     val options = AppUpdateOptions.defaultOptions(type)
     val resumable = info.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS
-    if (!resumable && !info.isUpdateTypeAllowed(options)) {
-      promise.reject(CodedException("ERR_UPDATE_NOT_ALLOWED", "Play does not allow a ${if (type == AppUpdateType.IMMEDIATE) "immediate" else "flexible"} update right now", null))
+    // Same check checkPlayUpdate reports as immediateAllowed / flexibleAllowed.
+    if (!resumable && !info.isUpdateTypeAllowed(type)) {
+      val name = if (type == AppUpdateType.IMMEDIATE) "an immediate" else "a flexible"
+      promise.reject(CodedException("ERR_UPDATE_NOT_ALLOWED", "Play does not allow $name update right now", null))
       return
     }
     try {

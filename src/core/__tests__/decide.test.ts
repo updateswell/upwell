@@ -111,6 +111,24 @@ const cases: Case[] = [
     },
   },
   {
+    name: 'required updates carry requiredMessage, not the recommendation copy',
+    input: input({
+      installed: androidInstalled({ buildNumber: '290' }),
+      policy: policy({
+        android: { requiredMessage: { title: 'Update required', body: 'Old API is gone.' } },
+      }),
+    }),
+    expected: {
+      kind: 'store.required',
+      message: { title: 'Update required', body: 'Old API is gone.' },
+    },
+  },
+  {
+    name: 'required without requiredMessage has no message (UI uses its default copy)',
+    input: input({ installed: androidInstalled({ buildNumber: '290' }) }),
+    expected: { kind: 'store.required', message: null },
+  },
+  {
     name: 'required beats a ready OTA',
     input: input({ installed: androidInstalled({ buildNumber: '290' }), ota: { status: 'ready' } }),
     expected: { kind: 'store.required' },

@@ -1,13 +1,15 @@
 {
   "expo": {
-    "name": "example",
-    "slug": "example",
-    "version": "1.0.0",
+    "name": "upwell-example",
+    "slug": "upwell-example",
+    "version": "3.3.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.upwell.example",
+      "buildNumber": "7"
     },
     "android": {
       "adaptiveIcon": {
@@ -16,10 +18,22 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "dev.upwell.example",
+      "versionCode": 330
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "runtimeVersion": "3.3.0",
+    "experiments": {
+      "autolinkingModuleResolution": true
+    },
+    "plugins": [
+      [
+        "../app.plugin.js",
+        {}
+      ]
+    ]
   }
 }

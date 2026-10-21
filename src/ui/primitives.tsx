@@ -6,6 +6,7 @@ import {
   Text,
   type TextStyle,
   View,
+  type StyleProp,
   type ViewStyle,
 } from 'react-native';
 
@@ -17,7 +18,7 @@ export function UpwellButton(props: {
   variant?: 'primary' | 'secondary';
   busy?: boolean;
   testID?: string;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }) {
   const t = useUpwellTheme();
   const primary = (props.variant ?? 'primary') === 'primary';
@@ -57,7 +58,7 @@ export function UpwellButton(props: {
 export function UpwellText(props: {
   children: ReactNode;
   variant?: 'title' | 'body' | 'muted';
-  style?: TextStyle;
+  style?: StyleProp<TextStyle>;
   numberOfLines?: number;
 }) {
   const t = useUpwellTheme();

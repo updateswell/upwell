@@ -61,7 +61,10 @@ export interface PlatformPolicy {
   /** Percentage (0–100) of installs that see store prompts. Default 100. */
   rollout?: number;
   ota?: OtaPolicy;
+  /** Copy for recommended updates. */
   message?: PolicyMessage;
+  /** Copy for required (blocking) updates. Default: the UI kit's built-in copy. */
+  requiredMessage?: PolicyMessage;
   /** Overrides the store URL used for store-link prompts. */
   storeUrl?: string;
 }

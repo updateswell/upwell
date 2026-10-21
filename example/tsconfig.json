@@ -1,6 +1,12 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    "paths": {
+      "upwell": ["../src/index.ts"],
+      "upwell/react": ["../src/react/index.tsx"],
+      "upwell/ui": ["../src/ui/index.ts"],
+      "upwell/expo-updates": ["../src/expo-updates/index.ts"]
+    }
   }
 }

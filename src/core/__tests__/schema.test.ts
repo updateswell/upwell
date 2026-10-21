@@ -32,6 +32,8 @@ const policyCorpus: unknown[] = [
   { schemaVersion: 1, ios: { country: 'ind' } },
   { schemaVersion: 1, android: { message: { title: 'Hi' } } },
   { schemaVersion: 1, android: { message: { title: 5 } } },
+  { schemaVersion: 1, android: { requiredMessage: { body: 'Please update' } } },
+  { schemaVersion: 1, ios: { requiredMessage: { body: '' } } },
 ];
 
 const releasesCorpus: unknown[] = [

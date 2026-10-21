@@ -1,10 +1,12 @@
 {
-  "name": "example",
+  "name": "upwell-example",
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
     "expo": "~58.0.16",
     "expo-status-bar": "~58.0.3",
+    "expo-system-ui": "~58.0.6",
+    "expo-updates": "~58.0.17",
     "react": "19.3.0",
     "react-native": "0.88.0"
   },
@@ -14,9 +16,14 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "autolinking": {
+      "nativeModulesDir": ".."
+    }
+  }
 }

@@ -16,6 +16,7 @@ const PLATFORM_KEYS = [
   'rollout',
   'ota',
   'message',
+  'requiredMessage',
   'storeUrl',
 ];
 const IOS_KEYS = [...PLATFORM_KEYS, 'appStoreId', 'country'];
@@ -135,15 +136,17 @@ function checkPlatform(c: Collector, path: string, p: unknown, ios: boolean) {
     }
   }
 
-  if (p.message !== undefined) {
-    if (!isObject(p.message)) {
-      c.error(`${path}.message`, 'must be an object');
-    } else {
-      unknownKeys(c, `${path}.message`, p.message, ['title', 'body', 'releaseNotesUrl']);
-      checkString(c, `${path}.message.title`, p.message.title);
-      checkString(c, `${path}.message.body`, p.message.body);
-      checkString(c, `${path}.message.releaseNotesUrl`, p.message.releaseNotesUrl);
+  for (const key of ['message', 'requiredMessage'] as const) {
+    const m = p[key];
+    if (m === undefined) continue;
+    if (!isObject(m)) {
+      c.error(`${path}.${key}`, 'must be an object');
+      continue;
     }
+    unknownKeys(c, `${path}.${key}`, m, ['title', 'body', 'releaseNotesUrl']);
+    checkString(c, `${path}.${key}.title`, m.title);
+    checkString(c, `${path}.${key}.body`, m.body);
+    checkString(c, `${path}.${key}.releaseNotesUrl`, m.releaseNotesUrl);
   }
 
   checkString(c, `${path}.storeUrl`, p.storeUrl);

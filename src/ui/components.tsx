@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   View,
+  type StyleProp,
   type ViewStyle,
 } from 'react-native';
 
@@ -19,7 +20,7 @@ import { SIMULATION_SCENARIOS, type SimulationScenario } from '../simulation';
 interface FloatingProps {
   /** Distance from the bottom of the screen (e.g. your safe-area inset + tab bar). Default 24. */
   bottomOffset?: number;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 function useAppear(visible: boolean) {
@@ -163,7 +164,7 @@ export function UpdatePrompt(props: FloatingProps) {
 }
 
 /** Blocking full-screen modal for required updates. It can't be dismissed. */
-export function ForceUpdateScreen(props: { style?: ViewStyle }) {
+export function ForceUpdateScreen(props: { style?: StyleProp<ViewStyle> }) {
   const { decision, isBusy, progress, startUpdate } = useAppUpdate();
   const t = useUpwellTheme();
   const downloadingRequired = decision.kind === 'store.downloading' && decision.required;
@@ -246,7 +247,7 @@ function ReleaseRow({ release }: { release: Release }) {
 }
 
 /** Bottom sheet shown once after an OTA update was applied, with its release notes. */
-export function UpdatedSheet(props: { style?: ViewStyle }) {
+export function UpdatedSheet(props: { style?: StyleProp<ViewStyle> }) {
   const { justUpdated, markSeen } = useUpdateHistory();
   const t = useUpwellTheme();
   return (
@@ -285,7 +286,7 @@ export function UpdatedSheet(props: { style?: ViewStyle }) {
 }
 
 /** OTA release history for the running native version. Render it as a screen or inside one. */
-export function WhatsNew(props: { style?: ViewStyle; showTitle?: boolean }) {
+export function WhatsNew(props: { style?: StyleProp<ViewStyle>; showTitle?: boolean }) {
   const { history } = useUpdateHistory();
   const t = useUpwellTheme();
   return (
@@ -338,7 +339,10 @@ export function UpwellUI({
 }
 
 /** Dev tool: jump to any state and read why the engine decided what it did. */
-export function UpwellDevMenu(props: { style?: ViewStyle; scenarios?: SimulationScenario[] }) {
+export function UpwellDevMenu(props: {
+  style?: StyleProp<ViewStyle>;
+  scenarios?: SimulationScenario[];
+}) {
   const { decision, state, simulate, explain } = useAppUpdate();
   const t = useUpwellTheme();
   const scenarios = props.scenarios ?? SIMULATION_SCENARIOS;

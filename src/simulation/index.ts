@@ -95,6 +95,10 @@ function simulatedPolicy(latestRuntime: string, latestBuild: number, minimumBuil
         title: 'Update available',
         body: 'Version 3.4.0 makes checkout faster. (Simulated)',
       },
+      requiredMessage: {
+        title: 'Update required',
+        body: 'This version is no longer supported. Update to keep using the app. (Simulated)',
+      },
     },
     ios: {
       appStoreId: '1234567890',
@@ -113,6 +117,10 @@ function simulatedPolicy(latestRuntime: string, latestBuild: number, minimumBuil
       message: {
         title: 'Update available',
         body: 'Version 3.4.0 makes checkout faster. (Simulated)',
+      },
+      requiredMessage: {
+        title: 'Update required',
+        body: 'This version is no longer supported. Update to keep using the app. (Simulated)',
       },
     },
   };

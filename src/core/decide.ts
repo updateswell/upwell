@@ -323,7 +323,7 @@ export function explain(input: DecisionInput): Explanation {
       ),
       target: required.target,
       storeUrl,
-      message: p?.message ?? null,
+      message: p?.requiredMessage ?? null,
       because: required.because,
     });
   }

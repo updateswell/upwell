@@ -87,12 +87,16 @@
   "homepage": "https://github.com/updateswell/upwell#readme",
   "peerDependencies": {
     "expo": "*",
+    "expo-constants": "*",
     "expo-updates": "*",
     "react": "*",
     "react-native": "*"
   },
   "peerDependenciesMeta": {
     "expo-updates": {
+      "optional": true
+    },
+    "expo-constants": {
       "optional": true
     }
   },
@@ -109,6 +113,7 @@
     "eslint": "~9.39.4",
     "eslint-config-universe": "^16.1.2",
     "expo": "^58.0.16",
+    "expo-constants": "~58.0.12",
     "expo-updates": "~58.0.17",
     "jest": "^30.5.2",
     "jest-expo": "~58.0.11",

@@ -10,7 +10,12 @@ import com.google.android.play.core.install.model.AppUpdateType
  * Drives Play's FakeAppUpdateManager so every in-app update state can be exercised without
  * Play internal app sharing. The rest of the module talks to it exactly like the real manager.
  */
-internal class PlaySimulation(context: Context, config: Map<String, Any?>) {
+internal class PlaySimulation(
+  context: Context,
+  config: Map<String, Any?>,
+  /** Sends install states the fake doesn't report itself (see [step]). */
+  private val emit: (Map<String, Any?>) -> Unit
+) {
   val manager = FakeAppUpdateManager(context)
   private val handler = Handler(Looper.getMainLooper())
   private val userAccepts = config["userAccepts"] as? Boolean ?: true
@@ -60,14 +65,36 @@ internal class PlaySimulation(context: Context, config: Map<String, Any?>) {
         return@postDelayed
       }
       manager.setBytesDownloaded(totalBytes * i / steps)
+      // Play reports no install states for immediate updates (its own full-screen UI shows the
+      // progress), and neither does the fake. Emit them so the app's blocking screen can.
+      val immediate = type == AppUpdateType.IMMEDIATE
+      if (immediate) emitState("downloading", totalBytes * i / steps)
       if (i < steps) {
         step(i + 1, type)
       } else {
         manager.downloadCompletes()
         // An immediate update installs on its own; a flexible one waits for completeUpdate().
-        if (type == AppUpdateType.IMMEDIATE) handler.postDelayed({ installCompletes() }, stepMs)
+        if (immediate) {
+          emitState("installing", totalBytes)
+          handler.postDelayed({
+            manager.installCompletes()
+            // A real app restarts into the new build here.
+            emitState("installed", totalBytes)
+          }, stepMs)
+        }
       }
     }, stepMs)
+  }
+
+  private fun emitState(status: String, bytes: Long) {
+    emit(
+      mapOf(
+        "status" to status,
+        "bytesDownloaded" to bytes.toDouble(),
+        "totalBytesToDownload" to totalBytes.toDouble(),
+        "errorCode" to 0
+      )
+    )
   }
 
   /** Mirrors what happens after `completeUpdate()`; a real app would restart here. */

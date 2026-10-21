@@ -75,7 +75,6 @@ function setup(
     store?: StoreInfo | null;
     ota?: OtaAdapter;
     lastSeen?: string;
-    noMessage?: boolean;
   } = {}
 ) {
   const platform = new SimulatedPlatform(
@@ -88,7 +87,7 @@ function setup(
     true
   );
   if (over.lastSeen) platform.storage.set('lastSeenUpdateId', over.lastSeen);
-  const p = over.noMessage ? policy({ android: { message: undefined } }) : policy();
+  const p = policy();
   return new UpwellController({
     policy: staticSource(p),
     releases: staticSource(releases),
@@ -215,15 +214,25 @@ describe('UI kit', () => {
     });
   });
 
-  it('uses the policy message on the blocking screen', async () => {
-    const controller = setup({ installed: { buildNumber: '290' } });
+  it('uses requiredMessage on the blocking screen', async () => {
+    const platform = new SimulatedPlatform(
+      'android',
+      { installed: installed({ buildNumber: '290' }), store: { ...play } },
+      1,
+      true
+    );
+    const p = policy({
+      android: { requiredMessage: { title: 'Please update', body: 'The old API is gone.' } },
+    });
+    const controller = new UpwellController({ policy: staticSource(p), platform });
     await render(<App controller={controller} />);
     await until(() => !!screen.queryByTestId('upwell-force-update'));
-    expect(screen.getByText('Grab the latest version.')).toBeTruthy();
+    expect(screen.getByText('Please update')).toBeTruthy();
+    expect(screen.getByText('The old API is gone.')).toBeTruthy();
   });
 
   it('blocks the app for a required update', async () => {
-    const controller = setup({ installed: { buildNumber: '290' }, noMessage: true });
+    const controller = setup({ installed: { buildNumber: '290' } });
     await render(<App controller={controller} />);
     await until(() => !!screen.queryByTestId('upwell-force-update'));
     expect(screen.getByText('Update required')).toBeTruthy();
@@ -256,7 +265,7 @@ describe('UI kit', () => {
   });
 
   it('is themeable, including copy', async () => {
-    const controller = setup({ installed: { buildNumber: '290' }, noMessage: true });
+    const controller = setup({ installed: { buildNumber: '290' } });
     await render(
       <UpwellThemeProvider
         theme={{ strings: { requiredTitle: 'Bitte aktualisieren' } }}
