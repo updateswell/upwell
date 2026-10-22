@@ -1,5 +1,12 @@
 # upwell
 
+## 0.1.3
+
+### Patch Changes
+
+- 721fd98: Read the runtime version embedded in the binary (AndroidManifest / Expo.plist) when the OTA adapter reports none. Development builds using a `runtimeVersion` policy (`appVersion`, `fingerprint`, …) previously had no runtime, so stranded detection was skipped.
+- 24f4753: Fix the floating prompt and restart bar losing taps on Android to views rendered after `<UpwellUI />` (toasts, tab bars, LogBox). They were drawn below the prompt but still received its touches.
+
 ## 0.1.2
 
 ### Patch Changes
