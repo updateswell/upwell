@@ -21,7 +21,7 @@ Rule of thumb: someone adopting the library should only see the library and its 
 Anything that is the hosted product goes to `platform`, which depends on this repo only through
 published npm packages and public URLs.
 
-The repo is an npm workspace (`packages/*`). `website/` and `example/` keep their own installs
+The repo is an npm workspace (`packages/*`). `apps/docs/` and `example/` keep their own installs
 and lockfiles (they need different React versions) and read workspace files by relative path.
 
 ## Layout
@@ -42,7 +42,7 @@ packages/upwell/              the SDK, published as `upwell`
   schemas/                    policy and releases JSON Schemas (also served at upwell.run/schemas/*)
 example/                      Expo app using the SDK from packages/upwell/src (Metro maps `upwell/*` to it)
 docs/                         recipes, example policy files, and plans/
-website/                      docs + landing site (docs → apps/docs in plan 01; landing → platform in plan 03)
+apps/docs/                    docs + landing site (Fumadocs; own install; landing → platform in plan 03)
 ```
 
 ## Commands
@@ -57,6 +57,12 @@ npm run build        # packages/upwell/build and plugin/build
 Run them from the root: they run in every workspace (ESLint runs once, from the root). Run all
 four before committing. CI also compiles the Android module (with Kotlin unit tests) and the iOS
 module (macOS runner); there is no Mac locally, so Swift is only checked in CI.
+
+### Docs site
+
+`apps/docs` is outside the workspace: `cd apps/docs && npm install && npm run dev`. It deploys to
+Vercel from `main` (two projects, Root Directory `apps/docs`); CI builds it when `apps/docs/**`,
+the schemas or the SDK changelog change.
 
 ### Android locally
 
@@ -98,8 +104,8 @@ module (macOS runner); there is no Mac locally, so Swift is only checked in CI.
 - Core logic (`src/core`, controller decisions) is test-first: add a failing test, then the change.
 - Commit messages: Conventional Commits with a scope where useful (`fix(ui): …`, `feat(core): …`,
   `ci(release): …`). Small changes go straight to `main` and are pushed; CI must stay green.
-- Docs live on the site (`website/content/docs/`, `apps/docs/` after plan 01); update them with
-  behavior changes. The README is the npm landing page.
+- Docs live on the site (`apps/docs/content/docs/`); update them with behavior changes. The SDK
+  README (`packages/upwell/README.md`) is the npm landing page; keep its links absolute.
 
 ## Product rules
 

@@ -8,7 +8,7 @@ module.exports = defineConfig([
       'packages/*/build',
       'packages/upwell/plugin/build',
       'example',
-      'website',
+      'apps/docs',
       '**/coverage',
       '**/node_modules',
     ],

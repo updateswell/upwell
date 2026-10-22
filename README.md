@@ -22,7 +22,7 @@ npx expo install upwell
 | ------------------------------------ | --------------------------------------------------------------------------------------- |
 | [`packages/upwell`](packages/upwell) | The SDK: JavaScript, Android and iOS module, config plugin, JSON Schemas → npm `upwell` |
 | [`example`](example)                 | Expo example app that runs the SDK from source                                          |
-| [`website`](website)                 | Docs site ([docs.upwell.run](https://docs.upwell.run))                                  |
+| [`apps/docs`](apps/docs)             | Docs site ([docs.upwell.run](https://docs.upwell.run))                                  |
 | [`docs`](docs)                       | Recipes, example policy files and plans                                                 |
 
 ## Development

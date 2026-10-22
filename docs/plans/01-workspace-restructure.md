@@ -74,17 +74,17 @@ Behavior must not change; only paths.
 The site still serves both `upwell.run` and `docs.upwell.run` after this session; plan 03 takes
 the landing out.
 
-- [ ] `git mv website apps/docs`.
-- [ ] Fix its relative paths:
+- [x] `git mv website apps/docs`.
+- [x] Fix its relative paths:
   - `scripts/copy-schemas.mjs`: `../schemas` → `../../packages/upwell/schemas` (plan 02 changes it
     again to `packages/core/schemas`).
   - `content/docs/resources/changelog.mdx`: the `<include>` path to
-    `packages/upwell/CHANGELOG.md`.
+    `packages/upwell/CHANGELOG.md` (five levels up from `content/docs/resources`).
   - `next.config.mjs`: `turbopack.root` → the repo root (`join(here, '../..')`), and its comment.
   - `scripts/social.sh`: `OUT=../../assets/brand` (temporary; plan 03 moves brand assets out).
   - `lib/shared.ts`: `gitConfig.contentDir` → `apps/docs/content/docs` (the "Edit on GitHub"
     links).
-- [ ] Root config: `.vercelignore` paths (`website/.next` → `apps/docs/.next`, …), ESLint and
+- [x] Root config: `.vercelignore` paths (`website/.next` → `apps/docs/.next`, …), ESLint and
       Prettier ignores (`website` → `apps/docs`).
 - [ ] Vercel, both projects (`upwell-site` `prj_UPdFWKWgnJBd4AgmPzmT1YHoqycR` and `upwell-docs`
       `prj_uZKm3v65zyFUkNJhXzJLostqih0G`): Root Directory `website` → `apps/docs`; ignored build
@@ -92,7 +92,7 @@ the landing out.
       Change the settings right before merging, then deploy and check: `upwell.run`,
       `upwell.run/schemas/policy.schema.json`, `docs.upwell.run`, the changelog page, an OG image,
       `llms.txt`, the `/docs/x` → `docs.upwell.run/x` redirect.
-- [ ] CI: a `docs` job that builds `apps/docs` (`npm ci && npm run build` in that directory) when
+- [x] CI: a `docs` job that builds `apps/docs` (`npm ci && npm run build` in that directory) when
       `apps/docs/**` or `packages/*/schemas/**` change. Add path filters so the macOS iOS job only
       runs for SDK changes (`packages/upwell/**`, `example/**`).
 - [ ] Update the Claude memory note `upwell-docs-site` (Root Directory, deploy commands) and

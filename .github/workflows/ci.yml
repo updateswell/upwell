@@ -10,6 +10,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      sdk: ${{ steps.filter.outputs.sdk }}
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            sdk:
+              - 'packages/upwell/**'
+              - 'example/**'
+              - 'package-lock.json'
+              - '.github/workflows/ci.yml'
+            docs:
+              - 'apps/docs/**'
+              - 'packages/*/schemas/**'
+              - 'packages/upwell/CHANGELOG.md'
+              - '.github/workflows/ci.yml'
+
   js:
     name: Lint, typecheck, test, build
     runs-on: ubuntu-latest
@@ -52,7 +78,9 @@ jobs:
   ios:
     name: iOS (compile module)
     runs-on: macos-26
-    needs: js
+    # macOS runners are slow and scarce: only build for SDK changes.
+    needs: [changes, js]
+    if: needs.changes.outputs.sdk == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -77,3 +105,21 @@ jobs:
               exit 1
             }
           grep -E "Upwell.*warning:" build.log | sort -u | head -30 || true
+
+  docs:
+    name: Docs site (build)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
+    defaults:
+      run:
+        working-directory: apps/docs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/docs/package-lock.json
+      - run: npm ci
+      - run: npm run build

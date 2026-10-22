@@ -37,7 +37,7 @@ export const gitConfig = {
   repo: 'upwell',
   branch: 'main',
   /** Where the docs content lives inside the repository. */
-  contentDir: 'website/content/docs',
+  contentDir: 'apps/docs/content/docs',
 };
 
 export const githubUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`;

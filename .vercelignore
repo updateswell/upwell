@@ -1,4 +1,4 @@
-# Only the docs site (website/) and the files it includes are deployed.
+# Only the docs site (apps/docs/) and the files it includes are deployed.
 node_modules
 **/node_modules
 android
@@ -10,5 +10,5 @@ src
 coverage
 .changeset
 .github
-website/.next
-website/.source
+apps/docs/.next
+apps/docs/.source
