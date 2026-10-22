@@ -34,8 +34,10 @@ The code moves; it isn't added. `src/core` is about 29 KB of runtime JavaScript 
   example's Metro map point at `packages/core/src`. Only `upwell`'s build (`tsconfig.build.json`
   resets `paths`) reads `packages/core/dist`, like users do. So the build order matters: the root
   `build` runs core, then `upwell`, and the root `prepare` runs it on `npm install`/`npm ci`.
-  The packages only have `prepack`: npm runs workspace `prepare` scripts in parallel, and
-  `upwell`'s raced core's on CI. A new package that depends on core (the CLI, plan 05) goes into
+  npm runs workspace `prepare` scripts in parallel, and `changeset pack` packs in parallel, so
+  only `upwell` builds on `prepack`; core builds on `prepublishOnly` (a manual `npm publish`)
+  and otherwise ships the `dist` from the root `prepare`. With a `prepack` in core, tsdown emptied
+  `dist` while `upwell`'s `tsc` read it, and the first 0.2.0 release failed to pack. A new package that depends on core (the CLI, plan 05) goes into
   the root `build` after core.
 - **`packages/upwell/schemas` is gitignored** and copied from core by `upwell`'s build.
 
