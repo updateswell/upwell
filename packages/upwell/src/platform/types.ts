@@ -5,7 +5,7 @@ import type {
   Platform as PlatformName,
   StoreFlow,
   StoreInfo,
-} from '../core/types';
+} from '@upwell/core';
 
 /** Synchronous key-value storage (SharedPreferences / UserDefaults). */
 export interface KeyValueStorage {

@@ -52,11 +52,11 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && tsc -p plugin/tsconfig.json",
-    "clean": "rm -rf build plugin/build",
+    "build": "tsc -p tsconfig.build.json && tsc -p plugin/tsconfig.json && cp -R ../core/schemas .",
+    "clean": "rm -rf build plugin/build schemas",
     "typecheck": "tsc --noEmit && tsc --noEmit -p plugin/tsconfig.json",
     "test": "jest",
-    "prepare": "npm run build"
+    "prepack": "npm run build"
   },
   "keywords": [
     "react-native",
@@ -81,6 +81,9 @@
   "author": "ommgh <om.works01@gmail.com> (https://github.com/ommgh)",
   "license": "MIT",
   "homepage": "https://upwell.run",
+  "dependencies": {
+    "@upwell/core": "0.1.4"
+  },
   "peerDependencies": {
     "expo": "*",
     "expo-constants": "*",
@@ -103,7 +106,6 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^22.20.5",
     "@types/react": "~19.3.0",
-    "ajv": "^8.20.0",
     "babel-preset-expo": "~58.0.15",
     "expo": "^58.0.16",
     "expo-constants": "~58.0.12",

@@ -1,9 +1,9 @@
 import Ajv from 'ajv';
 
-import examplePolicy from '../../../../../docs/examples/policy.json';
-import exampleReleases from '../../../../../docs/examples/releases.json';
-import policySchema from '../../../schemas/policy.schema.json';
-import releasesSchema from '../../../schemas/releases.schema.json';
+import examplePolicy from '../../../../docs/examples/policy.json';
+import exampleReleases from '../../../../docs/examples/releases.json';
+import policySchema from '../../schemas/policy.schema.json';
+import releasesSchema from '../../schemas/releases.schema.json';
 import { validatePolicy, validateReleases } from '../validate';
 import { policy } from './fixtures';
 

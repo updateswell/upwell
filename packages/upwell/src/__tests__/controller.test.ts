@@ -1,6 +1,7 @@
+import type { DecisionKind, Policy, ReleasesDocument, StoreInfo } from '@upwell/core';
+
+import { policy as policyFixture } from '../../../core/src/__tests__/fixtures';
 import { UpwellController, type UpwellOptions } from '../controller';
-import { policy as policyFixture } from '../core/__tests__/fixtures';
-import type { DecisionKind, Policy, ReleasesDocument, StoreInfo } from '../core/types';
 import type { OtaAdapter } from '../ota/types';
 import type { BaseInstalledInfo, KeyValueStorage } from '../platform/types';
 import { SIMULATION_SCENARIOS, SimulatedPlatform, type SimulationScenario } from '../simulation';

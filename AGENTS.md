@@ -12,10 +12,10 @@ order and status before starting that work. `PLAN.md` is the original SDK plan (
 
 ## Repos
 
-| Repo                                              | What                                                                                                                       |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `updateswell/upwell` (this)                       | The library and what's tightly bound to it: SDK, `@upwell/core` (plan 02), `@upwell/cli` (plan 05), docs site, example app |
-| `updateswell/platform` (plan 03, not created yet) | The hosted product: landing page (`upwell.run`), Cloudflare API (`api.`/`cdn.upwell.run`), dashboard (`app.upwell.run`)    |
+| Repo                                              | What                                                                                                                    |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `updateswell/upwell` (this)                       | The library and what's tightly bound to it: SDK, `@upwell/core`, `@upwell/cli` (plan 05), docs site, example app        |
+| `updateswell/platform` (plan 03, not created yet) | The hosted product: landing page (`upwell.run`), Cloudflare API (`api.`/`cdn.upwell.run`), dashboard (`app.upwell.run`) |
 
 Rule of thumb: someone adopting the library should only see the library and its tools here.
 Anything that is the hosted product goes to `platform`, which depends on this repo only through
@@ -27,8 +27,10 @@ and lockfiles (they need different React versions) and read workspace files by r
 ## Layout
 
 ```
-packages/upwell/              the SDK, published as `upwell`
-  src/core/                   pure TS: types, validate, decide/explain, versions, rollout (no RN imports; becomes @upwell/core in plan 02)
+packages/core/                pure TS, published as `@upwell/core`: no dependencies, runs in RN, Node and Workers
+  src/                        types, validate, decide/explain, versions, rollout (imports nothing outside src/; a test enforces it)
+  schemas/                    policy and releases JSON Schemas (also served at upwell.run/schemas/*)
+packages/upwell/              the SDK, published as `upwell`; depends on @upwell/core and re-exports it
   src/controller.ts           UpwellController: checks, caching, OTA/store actions, simulation
   src/react/                  UpwellProvider, useAppUpdate
   src/ui/                     UI kit (prompt, restart bar, blocking screen, What's new, dev menu)
@@ -39,8 +41,8 @@ packages/upwell/              the SDK, published as `upwell`
   android/                    Kotlin module (Play in-app updates, install source, FakeAppUpdateManager simulation)
   ios/                        Swift module (App Store sheet, install info)
   plugin/                     config plugin (source in plugin/src, built to plugin/build)
-  schemas/                    policy and releases JSON Schemas (also served at upwell.run/schemas/*)
-example/                      Expo app using the SDK from packages/upwell/src (Metro maps `upwell/*` to it)
+  schemas/                    copied from packages/core/schemas by the build (gitignored)
+example/                      Expo app using the packages' sources (Metro maps `upwell/*` and `@upwell/core` to them)
 docs/                         recipes, example policy files, and plans/
 apps/docs/                    docs + landing site (Fumadocs; own install; landing → platform in plan 03)
 ```
@@ -48,15 +50,19 @@ apps/docs/                    docs + landing site (Fumadocs; own install; landin
 ## Commands
 
 ```sh
-npm test             # Jest (core, controller, UI, adapters)
+npm test             # Jest: core in plain Node; controller, UI, adapters with jest-expo
 npm run lint         # ESLint, zero warnings allowed
-npm run typecheck    # tsc for src and plugin
-npm run build        # packages/upwell/build and plugin/build
+npm run typecheck    # tsc for both packages and the plugin
+npm run build        # packages/core/dist (tsdown: ESM + CJS + types), packages/upwell/build and plugin/build
 ```
 
 Run them from the root: they run in every workspace (ESLint runs once, from the root). Run all
 four before committing. CI also compiles the Android module (with Kotlin unit tests) and the iOS
 module (macOS runner); there is no Mac locally, so Swift is only checked in CI.
+
+Inside the repo, `upwell` uses core's sources (tsconfig `paths`, Jest `moduleNameMapper`, the
+example's Metro map), so core edits show up without building. Only `upwell`'s build uses
+`packages/core/dist`, like users do; `npm install` builds core first.
 
 ### Docs site
 
@@ -101,7 +107,7 @@ the schemas or the SDK changelog change.
 
 - Match the surrounding code: naming, comment density (comments explain why, not what), and
   idioms. Prettier and ESLint config are in the repo.
-- Core logic (`src/core`, controller decisions) is test-first: add a failing test, then the change.
+- Core logic (`packages/core`, controller decisions) is test-first: add a failing test, then the change.
 - Commit messages: Conventional Commits with a scope where useful (`fix(ui): …`, `feat(core): …`,
   `ci(release): …`). Small changes go straight to `main` and are pushed; CI must stay green.
 - Docs live on the site (`apps/docs/content/docs/`); update them with behavior changes. The SDK

@@ -120,7 +120,7 @@ decision needs. Prefer your own UI? Skip `<UpwellUI />` and use [`useAppUpdate()
 ## The policy
 
 All fields are optional except `schemaVersion`. The published JSON Schema
-([`schemas/policy.schema.json`](https://github.com/updateswell/upwell/blob/main/packages/upwell/schemas/policy.schema.json)) gives you autocomplete and validation
+([`schemas/policy.schema.json`](https://github.com/updateswell/upwell/blob/main/packages/core/schemas/policy.schema.json)) gives you autocomplete and validation
 in editors; the runtime validator is stricter (for example, `minimum` above `latest` is rejected),
 and its errors appear in `explain()`. Unknown keys are ignored with a warning, so newer policies
 don't break older app versions.
@@ -227,8 +227,10 @@ upwell.subscribe((state) => console.log(state.decision));
 await upwell.check();
 ```
 
-`decide(input)` and `explain(input)` are exported too, for your own orchestration or server-side
-checks. Policies can come from anywhere through a `PolicySource`
+`decide(input)` and `explain(input)` are exported too, for your own orchestration. For servers,
+scripts and CI, the engine and validators are also published on their own as
+[`@upwell/core`](https://www.npmjs.com/package/@upwell/core) (no dependencies; `upwell` depends on
+it and re-exports it). Policies can come from anywhere through a `PolicySource`
 (`{ fetch(signal): Promise<Policy> }`), e.g. Firebase Remote Config; `jsonUrl()` and
 `staticSource()` are built in.
 
@@ -261,7 +263,7 @@ Floating components accept `bottomOffset` (add your safe-area inset or tab bar h
 ## Transparent OTA
 
 Publish a `releases.json` next to your policy
-([schema](https://github.com/updateswell/upwell/blob/main/packages/upwell/schemas/releases.schema.json)) and describe every OTA release:
+([schema](https://github.com/updateswell/upwell/blob/main/packages/core/schemas/releases.schema.json)) and describe every OTA release:
 
 ```json
 {

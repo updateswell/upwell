@@ -72,7 +72,7 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
-      - run: npm ci # `prepare` builds the package
+      - run: npm ci # the root `prepare` builds the packages
       - id: pack
         uses: changesets/action/pack@v2
         with:

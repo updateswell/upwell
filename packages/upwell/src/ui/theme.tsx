@@ -1,7 +1,6 @@
+import type { ReleaseKind } from '@upwell/core';
 import { createContext, type ReactNode, useContext, useMemo } from 'react';
 import { useColorScheme } from 'react-native';
-
-import type { ReleaseKind } from '../core/types';
 
 export interface UpwellColors {
   background: string;

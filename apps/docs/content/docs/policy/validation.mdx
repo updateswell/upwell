@@ -21,8 +21,8 @@ inline errors in VS Code and other editors:
 | `policy.json` | `https://upwell.run/schemas/policy.schema.json` |
 | `releases.json` | `https://upwell.run/schemas/releases.schema.json` |
 
-The schemas also ship in the package (`upwell/schemas/policy.schema.json`), so you can validate in CI
-with any JSON Schema validator:
+The schemas also ship in the packages (`upwell/schemas/policy.schema.json`, or
+`@upwell/core/schemas/policy.schema.json`), so you can validate in CI with any JSON Schema validator:
 
 ```bash
 npx ajv-cli validate --spec=draft7 -s node_modules/upwell/schemas/policy.schema.json -d policy.json
@@ -52,9 +52,30 @@ and `platforms` values, ISO timestamps, and unique ids.
 
 ## Validating in CI
 
-The validators are plain functions. Because `upwell` is a React Native package, the easiest place to
-run them is your app's existing Jest setup (for example with the `jest-expo` preset), so a broken
-policy fails CI before you publish it:
+The validators are plain functions from [`@upwell/core`](/docs/reference/core#upwellcore), which has
+no dependencies, so a plain Node script can run them and fail CI before you publish a broken policy:
+
+```js title="scripts/check-policy.mjs"
+import { readFileSync } from 'node:fs';
+import { validatePolicy, validateReleases } from '@upwell/core';
+
+const read = (path) => JSON.parse(readFileSync(path, 'utf8'));
+let failed = false;
+for (const [name, result] of [
+  ['policy.json', validatePolicy(read('upwell/policy.json'))],
+  ['releases.json', validateReleases(read('upwell/releases.json'))],
+]) {
+  for (const w of result.warnings) console.warn(`${name}: ${w}`);
+  if (!result.ok) {
+    for (const e of result.errors) console.error(`${name}: ${e}`);
+    failed = true;
+  }
+}
+process.exit(failed ? 1 : 0);
+```
+
+Add `@upwell/core` as a dev dependency for this (it's already installed with `upwell`, but list
+what you import). Or run the same checks in your app's existing Jest setup:
 
 ```ts title="__tests__/upwell-policy.test.ts"
 import { validatePolicy, validateReleases } from 'upwell';
@@ -78,8 +99,7 @@ You can also assert decisions there with [`decide()`](/docs/reference/core#decid
 is required to update".
 
 <Callout>
-  Outside a React Native toolchain (a plain Node script), use the JSON Schemas with a schema validator
-  instead. A dedicated `npx @upwell/cli validate` command is on the [roadmap](/docs/resources/roadmap).
+  A dedicated `npx @upwell/cli validate` command is on the [roadmap](/docs/resources/roadmap).
 </Callout>
 
 ## Seeing errors on a device

@@ -27,6 +27,7 @@ jobs:
           filters: |
             sdk:
               - 'packages/upwell/**'
+              - 'packages/core/**'
               - 'example/**'
               - 'package-lock.json'
               - '.github/workflows/ci.yml'

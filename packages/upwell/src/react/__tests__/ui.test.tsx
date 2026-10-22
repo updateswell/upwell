@@ -1,9 +1,9 @@
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react-native';
+import type { ReleasesDocument, StoreInfo } from '@upwell/core';
 import { Text } from 'react-native';
 
+import { policy } from '../../../../core/src/__tests__/fixtures';
 import { UpwellController } from '../../controller';
-import { policy } from '../../core/__tests__/fixtures';
-import type { ReleasesDocument, StoreInfo } from '../../core/types';
 import type { OtaAdapter } from '../../ota/types';
 import type { BaseInstalledInfo } from '../../platform/types';
 import { SimulatedPlatform } from '../../simulation';

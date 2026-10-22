@@ -7,6 +7,7 @@ module.exports = defineConfig([
     ignores: [
       'packages/*/build',
       'packages/upwell/plugin/build',
+      'packages/*/dist',
       'example',
       'apps/docs',
       '**/coverage',

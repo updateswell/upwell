@@ -1,20 +1,25 @@
-import { explain as runEngine, targetKey } from './core/decide';
-import { findRelease, releaseHistory } from './core/releases';
-import type {
-  Decision,
-  EngineConfig,
-  Explanation,
-  InstalledInfo,
-  IosPolicy,
-  OtaInfo,
-  Policy,
-  PromptHistory,
-  Release,
-  ReleasesDocument,
-  StoreFlow,
-  StoreInfo,
-} from './core/types';
-import { type ValidationResult, validatePolicy, validateReleases } from './core/validate';
+import {
+  type Decision,
+  type EngineConfig,
+  type Explanation,
+  type InstalledInfo,
+  type IosPolicy,
+  type OtaInfo,
+  type Policy,
+  type PromptHistory,
+  type Release,
+  type ReleasesDocument,
+  type StoreFlow,
+  type StoreInfo,
+  type ValidationResult,
+  explain as runEngine,
+  findRelease,
+  releaseHistory,
+  targetKey,
+  validatePolicy,
+  validateReleases,
+} from '@upwell/core';
+
 import type { OtaAdapter } from './ota/types';
 import { createNativePlatform } from './platform/nativePlatform';
 import type {

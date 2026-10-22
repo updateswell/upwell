@@ -1,3 +1,4 @@
+import type { Release } from '@upwell/core';
 import { type ReactNode, useEffect, useState } from 'react';
 import {
   Animated,
@@ -13,7 +14,6 @@ import {
 
 import { ProgressBar, UpwellButton, UpwellText } from './primitives';
 import { useUpwellTheme } from './theme';
-import type { Release } from '../core/types';
 import { useAppUpdate, useUpdateHistory } from '../react';
 import { SIMULATION_SCENARIOS, type SimulationScenario } from '../simulation';
 

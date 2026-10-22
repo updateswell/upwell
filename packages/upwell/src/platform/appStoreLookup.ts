@@ -1,4 +1,4 @@
-import type { AppStoreInfo } from '../core/types';
+import type { AppStoreInfo } from '@upwell/core';
 
 export interface AppStoreLookupOptions {
   bundleId: string;

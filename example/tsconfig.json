@@ -6,7 +6,8 @@
       "upwell": ["../packages/upwell/src/index.ts"],
       "upwell/react": ["../packages/upwell/src/react/index.tsx"],
       "upwell/ui": ["../packages/upwell/src/ui/index.ts"],
-      "upwell/expo-updates": ["../packages/upwell/src/expo-updates/index.ts"]
+      "upwell/expo-updates": ["../packages/upwell/src/expo-updates/index.ts"],
+      "@upwell/core": ["../packages/core/src/index.ts"]
     }
   }
 }

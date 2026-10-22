@@ -1,3 +1,4 @@
+import type { IosPolicy, PlatformPolicy, StoreFlow, StoreInfo } from '@upwell/core';
 import { Linking, Platform } from 'react-native';
 
 import { lookupAppStore } from './appStoreLookup';
@@ -9,7 +10,6 @@ import type {
   StoreProgress,
   UpwellPlatform,
 } from './types';
-import type { IosPolicy, PlatformPolicy, StoreFlow, StoreInfo } from '../core/types';
 import { getUpwellNative, type UpwellNativeModule } from '../native/UpwellNative';
 
 export interface NativePlatformOptions {
