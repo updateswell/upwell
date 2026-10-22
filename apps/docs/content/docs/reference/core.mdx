@@ -6,6 +6,28 @@ icon: Braces
 
 Everything here is exported from `upwell`.
 
+## @upwell/core
+
+The engine, validation, versions, rollout and releases helpers below live in
+[`@upwell/core`](https://www.npmjs.com/package/@upwell/core), a separate package with no
+dependencies. `upwell` depends on it and re-exports all of it, so apps never install it
+themselves. Use it directly where React Native isn't available: servers, Cloudflare Workers,
+scripts, CI checks and tests.
+
+```bash
+npm install @upwell/core
+```
+
+```ts
+import { explain, validatePolicy } from '@upwell/core';
+```
+
+It ships ESM and CommonJS builds with types, and the JSON Schemas as
+`@upwell/core/schemas/policy.schema.json` and `@upwell/core/schemas/releases.schema.json`.
+`upwell` and `@upwell/core` are released together with the same version number.
+
+Sources, Platform and Simulation (below) are only in `upwell`.
+
 ## Engine
 
 ### decide

@@ -63,7 +63,7 @@ The code moves; it isn't added. `src/core` is about 29 KB of runtime JavaScript 
 
 ## Session 2 · Publish
 
-- [ ] Changesets: the `fixed` group and a minor changeset for both packages.
+- [x] Changesets: the `fixed` group and a minor changeset for both packages.
 - [ ] npm trusted publishing is configured per package, and the package must exist first. The
       user publishes `@upwell/core` once by hand from `packages/core`
       (`npm publish --access public`), then adds the trusted publisher on npmjs.com: repo
@@ -71,7 +71,7 @@ The code moves; it isn't added. `src/core` is about 29 KB of runtime JavaScript 
 - [ ] Merge the release PR; check both packages publish with provenance.
 - [ ] Scratch directory: `npm i @upwell/core` installs exactly one package (`npm ls --all`);
       `npm i upwell` installs `upwell` + `@upwell/core` and nothing else new.
-- [ ] Docs: a short `@upwell/core` reference page (what it is, that `upwell` re-exports it, when to
+- [x] Docs: a short `@upwell/core` reference page (what it is, that `upwell` re-exports it, when to
       use it directly: servers, scripts, tests).
 
 ## Definition of done

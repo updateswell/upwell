@@ -227,8 +227,10 @@ upwell.subscribe((state) => console.log(state.decision));
 await upwell.check();
 ```
 
-`decide(input)` and `explain(input)` are exported too, for your own orchestration or server-side
-checks. Policies can come from anywhere through a `PolicySource`
+`decide(input)` and `explain(input)` are exported too, for your own orchestration. For servers,
+scripts and CI, the engine and validators are also published on their own as
+[`@upwell/core`](https://www.npmjs.com/package/@upwell/core) (no dependencies; `upwell` depends on
+it and re-exports it). Policies can come from anywhere through a `PolicySource`
 (`{ fetch(signal): Promise<Policy> }`), e.g. Firebase Remote Config; `jsonUrl()` and
 `staticSource()` are built in.
 
