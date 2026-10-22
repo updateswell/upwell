@@ -16,5 +16,5 @@
     "types": ["jest"],
     "noEmit": true
   },
-  "include": ["src", "docs/examples/*.json", "schemas/*.json"]
+  "include": ["src", "../../docs/examples/*.json", "schemas/*.json"]
 }

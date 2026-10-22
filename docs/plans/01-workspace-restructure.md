@@ -25,37 +25,41 @@ docs/                 recipes, example policy files, plans
   `package-lock.json`. The example needs React exactly as React Native pins it; the docs need
   Next.js's React. Separate installs avoid hoisting clashes. Both read workspace files by relative
   path.
-- **The SDK moves into `packages/`, not just core.** As far as I know, Changesets versions
-  workspace packages but not a published root package, so keeping the SDK at the root next to
-  workspaces is fragile. Verify before session 1: if Changesets does release a non-private root
-  package alongside workspaces, the SDK could stay at the root, but `packages/upwell` is cleaner
-  anyway.
+- **The SDK moves into `packages/`, not just core.** Changesets treats a private root with
+  workspaces as a monorepo and versions the workspace packages; keeping a published package at the
+  root next to workspaces is fragile, and `packages/upwell` is cleaner anyway. (Decided at the
+  start of session 1; `npx changeset status` sees `upwell` in `packages/upwell`.)
+- **The npm README uses absolute links.** npm resolves relative links against the repository
+  root plus `repository.directory`, which breaks links to files outside the package (`docs/`,
+  `assets/brand/`). The README links to GitHub and raw.githubusercontent.com instead.
+- **ESLint and Prettier run once from the root**; `test`, `typecheck` and `build` run in each
+  workspace (`--workspaces --if-present`).
 - **History is kept** by using `git mv` for every move.
 
 ## Session 1 · Move the SDK into `packages/upwell`
 
 Behavior must not change; only paths.
 
-- [ ] Record the published file list: `npm pack --dry-run --json > /tmp/pack-before.json`.
-- [ ] `git mv` into `packages/upwell/`: `src`, `android`, `ios`, `plugin`, `schemas`,
+- [x] Record the published file list: `npm pack --dry-run --json > /tmp/pack-before.json`.
+- [x] `git mv` into `packages/upwell/`: `src`, `android`, `ios`, `plugin`, `schemas`,
       `app.plugin.js`, `expo-module.config.json`, `babel.config.js`, `jest.config.js`,
       `tsconfig.json`, `tsconfig.build.json`, `package.json`, `README.md`, `CHANGELOG.md`,
       `LICENSE`, `.npmignore`. Keep at the root: `example/`, `website/`, `docs/`, `.github/`,
       `.changeset/`, `PLAN.md`, `AGENTS.md`, `CLAUDE.md`, ESLint and Prettier config.
-- [ ] New root `package.json`: `private: true`, `workspaces: ["packages/*"]`, scripts that run
+- [x] New root `package.json`: `private: true`, `workspaces: ["packages/*"]`, scripts that run
       across workspaces (`test`, `lint`, `typecheck`, `build`), and the shared dev tooling
       (ESLint, Prettier, Changesets). Keep a root `LICENSE` copy (GitHub shows it) and a short root
       `README.md` that points to `packages/upwell/README.md` and the docs.
-- [ ] Example app: `example/package.json` (`expo.autolinking.nativeModulesDir`),
+- [x] Example app: `example/package.json` (`expo.autolinking.nativeModulesDir`),
       `example/metro.config.js` (watch folder, the `sources` map now under `packages/upwell/src`),
       `example/app.json` (plugin path `../packages/upwell/app.plugin.js`).
-- [ ] ESLint and Prettier ignores: `build` → `packages/*/build`, `plugin/build` →
+- [x] ESLint and Prettier ignores: `build` → `packages/*/build`, `plugin/build` →
       `packages/upwell/plugin/build`.
-- [ ] CI (`.github/workflows/ci.yml`): `npm ci` at the root, `npm pack --dry-run` in
+- [x] CI (`.github/workflows/ci.yml`): `npm ci` at the root, `npm pack --dry-run` in
       `packages/upwell`, the example steps unchanged. Release workflow: check that Changesets finds
       `packages/upwell` and that the publish and pack-plan steps run in the right directory. The
       npm trusted publisher points at the workflow file name, which doesn't change.
-- [ ] Verify:
+- [x] Verify:
   - lint, typecheck, tests, build from the root;
   - `npm pack --dry-run --json` in `packages/upwell` lists the same files as before (diff the
     JSON);
@@ -63,7 +67,7 @@ Behavior must not change; only paths.
     `./gradlew :upwell:compileDebugKotlin :upwell:testDebugUnitTest` passes;
   - CI's Android and iOS jobs pass;
   - a Changesets dry run (`npx changeset status`) sees `upwell`.
-- [ ] Update `AGENTS.md` (layout, commands).
+- [x] Update `AGENTS.md` (layout, commands).
 
 ## Session 2 · Move the site to `apps/docs`
 

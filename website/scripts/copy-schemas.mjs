@@ -7,6 +7,6 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 mkdirSync(join(root, 'public/schemas'), { recursive: true });
 for (const name of ['policy.schema.json', 'releases.schema.json']) {
-  cpSync(join(root, '../schemas', name), join(root, 'public/schemas', name));
+  cpSync(join(root, '../packages/upwell/schemas', name), join(root, 'public/schemas', name));
 }
 console.log('copied schemas to public/schemas');
