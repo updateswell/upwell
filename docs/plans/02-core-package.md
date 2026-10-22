@@ -59,7 +59,7 @@ The code moves; it isn't added. `src/core` is about 29 KB of runtime JavaScript 
       show up without building.
 - [x] Docs: `apps/docs/scripts/copy-schemas.mjs` reads `../../packages/core/schemas`; Vercel's
       ignored build step watches that path instead.
-- [ ] Verify: everything from plan 01 session 1 (lint, typecheck, tests, build, identical
+- [x] Verify: everything from plan 01 session 1 (lint, typecheck, tests, build, identical
       `upwell` public API, example on the emulator, CI), plus `require('@upwell/core')` and an ESM
       import from a scratch Node project, and a tiny Worker (Vitest Workers pool or `wrangler dev`)
       running `validatePolicy` and `explain`.
