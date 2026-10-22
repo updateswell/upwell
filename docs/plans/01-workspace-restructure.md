@@ -86,7 +86,7 @@ the landing out.
     links).
 - [x] Root config: `.vercelignore` paths (`website/.next` → `apps/docs/.next`, …), ESLint and
       Prettier ignores (`website` → `apps/docs`).
-- [ ] Vercel, both projects (`upwell-site` `prj_UPdFWKWgnJBd4AgmPzmT1YHoqycR` and `upwell-docs`
+- [x] Vercel, both projects (`upwell-site` `prj_UPdFWKWgnJBd4AgmPzmT1YHoqycR` and `upwell-docs`
       `prj_uZKm3v65zyFUkNJhXzJLostqih0G`): Root Directory `website` → `apps/docs`; ignored build
       step → `git diff --quiet HEAD^ HEAD -- . ../../packages/upwell/CHANGELOG.md ../../packages/upwell/schemas`.
       Change the settings right before merging, then deploy and check: `upwell.run`,
@@ -95,8 +95,19 @@ the landing out.
 - [x] CI: a `docs` job that builds `apps/docs` (`npm ci && npm run build` in that directory) when
       `apps/docs/**` or `packages/*/schemas/**` change. Add path filters so the macOS iOS job only
       runs for SDK changes (`packages/upwell/**`, `example/**`).
-- [ ] Update the Claude memory note `upwell-docs-site` (Root Directory, deploy commands) and
+- [x] Update the Claude memory note `upwell-docs-site` (Root Directory, deploy commands) and
       `AGENTS.md`.
+
+## Outcome
+
+Done 2026-10-22 in PR #5 (merged with a merge commit, so each session stays one revertable
+commit). Vercel settings were changed with `npx vercel api /v9/projects/<id> -X PATCH` before
+merging, and the PR previews were redeployed to check them. Notes for later plans:
+
+- `changeset version` doesn't update the workspace version in `package-lock.json`; `npm ci`
+  accepts that, and the next `npm install` fixes it.
+- The first release from the new layout is the "chore: version packages" PR for `upwell@0.1.4`
+  (README links and `repository.directory` only).
 
 ## Definition of done
 
