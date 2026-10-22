@@ -3,7 +3,16 @@ const universe = require('eslint-config-universe/flat/native');
 const universeWeb = require('eslint-config-universe/flat/web');
 
 module.exports = defineConfig([
-  { ignores: ['build', 'plugin/build', 'example', 'website', 'coverage', '**/node_modules'] },
+  {
+    ignores: [
+      'packages/*/build',
+      'packages/upwell/plugin/build',
+      'example',
+      'apps/docs',
+      '**/coverage',
+      '**/node_modules',
+    ],
+  },
   ...universe,
   ...universeWeb,
   { rules: { 'no-void': ['warn', { allowAsStatement: true }] } },

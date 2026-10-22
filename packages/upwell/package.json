@@ -1,0 +1,118 @@
+{
+  "name": "upwell",
+  "version": "0.1.3",
+  "description": "Update orchestrator for React Native & Expo: OTA, Play in-app updates and App Store prompts driven by one policy",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    },
+    "./react": {
+      "types": "./build/react/index.d.ts",
+      "default": "./build/react/index.js"
+    },
+    "./expo-updates": {
+      "types": "./build/expo-updates/index.d.ts",
+      "default": "./build/expo-updates/index.js"
+    },
+    "./ui": {
+      "types": "./build/ui/index.d.ts",
+      "default": "./build/ui/index.js"
+    },
+    "./app.plugin.js": "./app.plugin.js",
+    "./schemas/*": "./schemas/*",
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "react": [
+        "build/react/index.d.ts"
+      ],
+      "expo-updates": [
+        "build/expo-updates/index.d.ts"
+      ],
+      "ui": [
+        "build/ui/index.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "build",
+    "plugin/build",
+    "app.plugin.js",
+    "schemas",
+    "android/build.gradle",
+    "android/src/main",
+    "ios",
+    "expo-module.config.json",
+    "src",
+    "!src/**/__tests__"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsc -p plugin/tsconfig.json",
+    "clean": "rm -rf build plugin/build",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p plugin/tsconfig.json",
+    "test": "jest",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "react-native",
+    "expo",
+    "in-app-updates",
+    "app-update",
+    "force-update",
+    "ota",
+    "expo-updates",
+    "play-core",
+    "app-store",
+    "upwell"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/updateswell/upwell.git",
+    "directory": "packages/upwell"
+  },
+  "bugs": {
+    "url": "https://github.com/updateswell/upwell/issues"
+  },
+  "author": "ommgh <om.works01@gmail.com> (https://github.com/ommgh)",
+  "license": "MIT",
+  "homepage": "https://upwell.run",
+  "peerDependencies": {
+    "expo": "*",
+    "expo-constants": "*",
+    "expo-updates": "*",
+    "react": "*",
+    "react-native": "*"
+  },
+  "peerDependenciesMeta": {
+    "expo-updates": {
+      "optional": true
+    },
+    "expo-constants": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@react-native/jest-preset": "^0.88.0",
+    "@testing-library/react-native": "^14.1.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.20.5",
+    "@types/react": "~19.3.0",
+    "ajv": "^8.20.0",
+    "babel-preset-expo": "~58.0.15",
+    "expo": "^58.0.16",
+    "expo-constants": "~58.0.12",
+    "expo-updates": "~58.0.17",
+    "jest": "^30.5.2",
+    "jest-expo": "~58.0.11",
+    "react": "^19.3.0",
+    "react-native": "^0.88.0",
+    "test-renderer": "^1.3.1",
+    "typescript": "~6.0.3"
+  }
+}

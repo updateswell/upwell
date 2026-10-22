@@ -3,10 +3,10 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "upwell": ["../src/index.ts"],
-      "upwell/react": ["../src/react/index.tsx"],
-      "upwell/ui": ["../src/ui/index.ts"],
-      "upwell/expo-updates": ["../src/expo-updates/index.ts"]
+      "upwell": ["../packages/upwell/src/index.ts"],
+      "upwell/react": ["../packages/upwell/src/react/index.tsx"],
+      "upwell/ui": ["../packages/upwell/src/ui/index.ts"],
+      "upwell/expo-updates": ["../packages/upwell/src/expo-updates/index.ts"]
     }
   }
 }

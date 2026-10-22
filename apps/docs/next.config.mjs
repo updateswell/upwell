@@ -10,8 +10,8 @@ const config = {
   reactStrictMode: true,
   // Keeps the dev badge out of the social image captures (scripts/social.sh).
   devIndicators: false,
-  // The docs include files from the repository root (CHANGELOG.md).
-  turbopack: { root: join(here, '..') },
+  // The docs include files from elsewhere in the repository (packages/upwell/CHANGELOG.md).
+  turbopack: { root: join(here, '../..') },
 };
 
 export default withMDX(config);

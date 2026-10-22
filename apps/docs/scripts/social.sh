@@ -4,7 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 URL="${1:-http://localhost:3000}"
-OUT=../assets/brand
+OUT=../../assets/brand
 shot() {
   # $4: device scale (README banners are captured at 2x for high-DPI screens)
   chromium --headless=new --use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist \

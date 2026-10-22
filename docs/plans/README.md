@@ -14,7 +14,7 @@ session.
 | #   | Plan                                                                 | Repo                 | Depends on                 | Status      |
 | --- | -------------------------------------------------------------------- | -------------------- | -------------------------- | ----------- |
 | 00  | [Architecture and decisions](00-architecture.md)                     | both                 | —                          | Read first  |
-| 01  | [Restructure `upwell` into a workspace](01-workspace-restructure.md) | `upwell`             | —                          | Not started |
+| 01  | [Restructure `upwell` into a workspace](01-workspace-restructure.md) | `upwell`             | —                          | In progress |
 | 02  | [`@upwell/core`](02-core-package.md)                                 | `upwell`             | 01                         | Not started |
 | 03  | [`platform` repo and the landing page](03-platform-and-landing.md)   | `platform` (new)     | 01                         | Not started |
 | 04  | [API: hosting on Cloudflare](04-api.md)                              | `platform`           | 02, 03                     | Not started |

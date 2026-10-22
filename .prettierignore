@@ -1,9 +1,9 @@
-build
-plugin/build
+packages/*/build
+packages/upwell/plugin/build
 example
-coverage
+**/coverage
 node_modules
 .changeset
 PLAN.md
-CHANGELOG.md
-website
+**/CHANGELOG.md
+apps/docs

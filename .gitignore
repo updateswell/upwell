@@ -57,7 +57,7 @@ yarn-error.log
 .expo/*
 
 # Build output
-plugin/build/
+packages/upwell/plugin/build/
 coverage/
 *.tsbuildinfo
 *.tgz

@@ -23,7 +23,7 @@
   "private": true,
   "expo": {
     "autolinking": {
-      "nativeModulesDir": ".."
+      "nativeModulesDir": "../packages/upwell"
     }
   }
 }

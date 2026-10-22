@@ -21,27 +21,28 @@ Rule of thumb: someone adopting the library should only see the library and its 
 Anything that is the hosted product goes to `platform`, which depends on this repo only through
 published npm packages and public URLs.
 
-Plan 01 turns this repo into a workspace (`packages/upwell`, `packages/core`, `packages/cli`,
-`apps/docs`). Until then the layout below applies.
+The repo is an npm workspace (`packages/*`). `apps/docs/` and `example/` keep their own installs
+and lockfiles (they need different React versions) and read workspace files by relative path.
 
 ## Layout
 
 ```
-src/core/         pure TS: types, validate, decide/explain, versions, rollout (no RN imports; becomes @upwell/core in plan 02)
-src/controller.ts UpwellController: checks, caching, OTA/store actions, simulation
-src/react/        UpwellProvider, useAppUpdate
-src/ui/           UI kit (prompt, restart bar, blocking screen, What's new, dev menu)
-src/expo-updates/ OTA adapter for expo-updates
-src/platform/     native platform bridge, storage, App Store lookup
-src/simulation/   fake platform/store/OTA for simulate() and tests
-src/sources/      jsonUrl, staticSource
-android/          Kotlin module (Play in-app updates, install source, FakeAppUpdateManager simulation)
-ios/              Swift module (App Store sheet, install info)
-plugin/           config plugin (source in plugin/src, built to plugin/build)
-schemas/          policy and releases JSON Schemas (also served at upwell.run/schemas/*)
-example/          Expo app using the SDK from src/ (Metro maps `upwell/*` to src)
-docs/             recipes, example policy files, and plans/
-website/          docs + landing site (docs → apps/docs in plan 01; landing → platform in plan 03)
+packages/upwell/              the SDK, published as `upwell`
+  src/core/                   pure TS: types, validate, decide/explain, versions, rollout (no RN imports; becomes @upwell/core in plan 02)
+  src/controller.ts           UpwellController: checks, caching, OTA/store actions, simulation
+  src/react/                  UpwellProvider, useAppUpdate
+  src/ui/                     UI kit (prompt, restart bar, blocking screen, What's new, dev menu)
+  src/expo-updates/           OTA adapter for expo-updates
+  src/platform/               native platform bridge, storage, App Store lookup
+  src/simulation/             fake platform/store/OTA for simulate() and tests
+  src/sources/                jsonUrl, staticSource
+  android/                    Kotlin module (Play in-app updates, install source, FakeAppUpdateManager simulation)
+  ios/                        Swift module (App Store sheet, install info)
+  plugin/                     config plugin (source in plugin/src, built to plugin/build)
+  schemas/                    policy and releases JSON Schemas (also served at upwell.run/schemas/*)
+example/                      Expo app using the SDK from packages/upwell/src (Metro maps `upwell/*` to it)
+docs/                         recipes, example policy files, and plans/
+apps/docs/                    docs + landing site (Fumadocs; own install; landing → platform in plan 03)
 ```
 
 ## Commands
@@ -50,11 +51,18 @@ website/          docs + landing site (docs → apps/docs in plan 01; landing �
 npm test             # Jest (core, controller, UI, adapters)
 npm run lint         # ESLint, zero warnings allowed
 npm run typecheck    # tsc for src and plugin
-npm run build        # build/ and plugin/build
+npm run build        # packages/upwell/build and plugin/build
 ```
 
-Run all four before committing. CI also compiles the Android module (with Kotlin unit tests) and
-the iOS module (macOS runner); there is no Mac locally, so Swift is only checked in CI.
+Run them from the root: they run in every workspace (ESLint runs once, from the root). Run all
+four before committing. CI also compiles the Android module (with Kotlin unit tests) and the iOS
+module (macOS runner); there is no Mac locally, so Swift is only checked in CI.
+
+### Docs site
+
+`apps/docs` is outside the workspace: `cd apps/docs && npm install && npm run dev`. It deploys to
+Vercel from `main` (two projects, Root Directory `apps/docs`); CI builds it when `apps/docs/**`,
+the schemas or the SDK changelog change.
 
 ### Android locally
 
@@ -96,8 +104,8 @@ the iOS module (macOS runner); there is no Mac locally, so Swift is only checked
 - Core logic (`src/core`, controller decisions) is test-first: add a failing test, then the change.
 - Commit messages: Conventional Commits with a scope where useful (`fix(ui): …`, `feat(core): …`,
   `ci(release): …`). Small changes go straight to `main` and are pushed; CI must stay green.
-- Docs live on the site (`website/content/docs/`, `apps/docs/` after plan 01); update them with
-  behavior changes. The README is the npm landing page.
+- Docs live on the site (`apps/docs/content/docs/`); update them with behavior changes. The SDK
+  README (`packages/upwell/README.md`) is the npm landing page; keep its links absolute.
 
 ## Product rules
 
@@ -112,5 +120,5 @@ the iOS module (macOS runner); there is no Mac locally, so Swift is only checked
 
 - After an OTA restart, two update checks run (one from the old JS instance during teardown).
 - The debug trace sometimes logs the same decision twice in a row.
-- `android/build.gradle` hardcodes `version = '0.0.1'` (the podspec reads `package.json`).
+- `packages/upwell/android/build.gradle` hardcodes `version = '0.0.1'` (the podspec reads `package.json`).
 - Simulation `ota.*` scenarios report the app as 3.4.0 (340) with runtime 3.3.0.
