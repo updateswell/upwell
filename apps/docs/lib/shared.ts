@@ -7,6 +7,9 @@ export const appDescription =
 export const siteUrl = 'https://upwell.run';
 export const docsUrl = 'https://docs.upwell.run';
 
+/** GA4 property "upwell": the same stream as upwell.run, so a visit across both is one session. */
+export const gaId = 'G-M93ZG8RWCG';
+
 /** Docs pages are served at the root (docs.upwell.run/quick-start). Internally they live under /docs. */
 export const docsRoute = '/';
 export const docsImageRoute = '/og/docs';
@@ -36,6 +39,11 @@ export function getPageMarkdownUrl(page: { slugs: string[]; locale?: string }) {
   const segments = [...page.slugs, 'content.md'];
 
   return { segments, url: getContentUrl(segments, page.locale) };
+}
+
+/** The page as Markdown at its public URL: `/quick-start.md`, and `/index.md` for the home page. */
+export function getPagePublicMarkdownUrl(page: { url: string }) {
+  return page.url === '/' ? '/index.md' : `${page.url}.md`;
 }
 
 const getImageUrl = createGetUrl(docsImageRoute);

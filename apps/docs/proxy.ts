@@ -22,6 +22,8 @@ export default function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(`${path.slice('/docs'.length) || '/'}${url.search}`, url), 308);
   }
   if (!NOT_DOCS.test(path)) path = `/docs${path === '/' ? '' : path}`;
+  // The home page has no slug of its own, so its Markdown is /index.md.
+  if (path === '/docs/index.md') path = '/docs.md';
 
   const suffix = rewriteSuffix(path);
   if (suffix) return NextResponse.rewrite(new URL(suffix, url));

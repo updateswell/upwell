@@ -11,8 +11,55 @@ import { notFound } from 'next/navigation';
 import { getMDXComponents } from '@/components/mdx';
 import type { Metadata } from 'next';
 import { createRelativeLink } from 'fumadocs-ui/mdx';
-import { docsHref, getPageImageUrl, getPageMarkdownUrl, gitConfig } from '@/lib/shared';
+import { getBreadcrumbItems } from 'fumadocs-core/breadcrumb';
+import {
+  appName,
+  docsHref,
+  docsUrl,
+  getPageImageUrl,
+  getPageMarkdownUrl,
+  getPagePublicMarkdownUrl,
+  gitConfig,
+  siteUrl,
+} from '@/lib/shared';
 import type { ComponentProps } from 'react';
+
+type Page = NonNullable<ReturnType<typeof source.getPage>>;
+
+/** schema.org data: the page as an article about Upwell (described on upwell.run), and its breadcrumbs. */
+function jsonLd(page: Page) {
+  const url = `${docsUrl}${page.url === '/' ? '' : page.url}`;
+  // Folders without an index page (Concepts, Guides…) have no URL, and a crumb needs one.
+  const crumbs = getBreadcrumbItems(page.url, source.getPageTree(), { includePage: true }).filter(
+    (item): item is { name: string; url: string } => typeof item.name === 'string' && !!item.url && item.url !== '/',
+  );
+
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'TechArticle',
+        headline: page.data.title,
+        description: page.data.description,
+        url,
+        image: `${docsUrl}${getPageImageUrl(page).url}`,
+        inLanguage: 'en',
+        isPartOf: { '@type': 'WebSite', name: `${appName} docs`, url: docsUrl },
+        about: { '@id': `${siteUrl}/#software`, name: appName, url: siteUrl },
+        publisher: { '@id': `${siteUrl}/#organization`, '@type': 'Organization', name: appName, url: siteUrl },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [{ name: 'Docs', url: '' }, ...crumbs].map((item, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          name: item.name,
+          item: `${docsUrl}${item.url}`,
+        })),
+      },
+    ],
+  };
+}
 
 export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
   const params = await props.params;
@@ -32,6 +79,10 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
 
   return (
     <DocsPage toc={toc} full={page.data.full}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(page)).replace(/</g, '\\u003c') }}
+      />
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription className="mb-0">{page.data.description}</DocsDescription>
       <div className="flex flex-row gap-2 items-center border-b pb-6">
@@ -65,7 +116,14 @@ export async function generateMetadata(props: PageProps<'/docs/[[...slug]]'>): P
   return {
     title: page.data.title,
     description: page.data.description,
+    alternates: {
+      canonical: page.url,
+      // The same page as Markdown, for agents (docs.upwell.run/quick-start.md).
+      types: { 'text/markdown': getPagePublicMarkdownUrl(page) },
+    },
     openGraph: {
+      type: 'article',
+      url: page.url,
       images: getPageImageUrl(page).url,
     },
   };

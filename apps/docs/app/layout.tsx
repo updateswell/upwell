@@ -1,8 +1,9 @@
+import { GoogleAnalytics } from '@next/third-parties/google';
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import type { Metadata } from 'next';
 import './global.css';
 import { Geist_Mono } from 'next/font/google';
-import { appDescription, appName, docsUrl } from '@/lib/shared';
+import { appDescription, appName, docsUrl, gaId } from '@/lib/shared';
 
 const geistMono = Geist_Mono({
   subsets: ['latin'],
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
     default: `${appName}: update orchestrator for React Native and Expo`,
   },
   description: appDescription,
-  openGraph: { images: '/og.png', siteName: appName },
+  openGraph: { images: '/og.png', siteName: appName, type: 'website', locale: 'en_US' },
   twitter: { card: 'summary_large_image', images: '/og.png' },
 };
 
@@ -26,6 +27,8 @@ export default function Layout({ children }: LayoutProps<'/'>) {
       <body className="flex flex-col min-h-screen">
         <RootProvider>{children}</RootProvider>
       </body>
+      {/* Production deploys only: previews and local dev stay out of the numbers. */}
+      {process.env.VERCEL_ENV === 'production' && <GoogleAnalytics gaId={gaId} />}
     </html>
   );
 }
