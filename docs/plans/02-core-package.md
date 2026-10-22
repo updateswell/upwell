@@ -32,8 +32,11 @@ The code moves; it isn't added. `src/core` is about 29 KB of runtime JavaScript 
   tests and `npm test -- --ci --coverage` stay as they were.
 - **In-repo, `upwell` uses core's sources**: tsconfig `paths`, Jest `moduleNameMapper` and the
   example's Metro map point at `packages/core/src`. Only `upwell`'s build (`tsconfig.build.json`
-  resets `paths`) reads `packages/core/dist`, like users do. `npm install`/`npm ci` run core's
-  `prepare` before `upwell`'s because `upwell` depends on it.
+  resets `paths`) reads `packages/core/dist`, like users do. So the build order matters: the root
+  `build` runs core, then `upwell`, and the root `prepare` runs it on `npm install`/`npm ci`.
+  The packages only have `prepack`: npm runs workspace `prepare` scripts in parallel, and
+  `upwell`'s raced core's on CI. A new package that depends on core (the CLI, plan 05) goes into
+  the root `build` after core.
 - **`packages/upwell/schemas` is gitignored** and copied from core by `upwell`'s build.
 
 ## Session 1 · Create `packages/core`
@@ -54,7 +57,7 @@ The code moves; it isn't added. `src/core` is about 29 KB of runtime JavaScript 
       build.
 - [x] Example app: add `@upwell/core` to the Metro `sources` map (→ `packages/core/src`) so edits
       show up without building.
-- [ ] Docs: `apps/docs/scripts/copy-schemas.mjs` reads `../../packages/core/schemas`; Vercel's
+- [x] Docs: `apps/docs/scripts/copy-schemas.mjs` reads `../../packages/core/schemas`; Vercel's
       ignored build step watches that path instead.
 - [ ] Verify: everything from plan 01 session 1 (lint, typecheck, tests, build, identical
       `upwell` public API, example on the emulator, CI), plus `require('@upwell/core')` and an ESM

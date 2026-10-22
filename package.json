@@ -5,14 +5,15 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build -w @upwell/core && npm run build -w upwell",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm test --workspaces --if-present --",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "npm run build && changeset publish"
+    "release": "npm run build && changeset publish",
+    "prepare": "npm run build"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
