@@ -13,6 +13,8 @@ export interface NativeInstalledInfo {
   osVersion: string | null;
   /** Device region, used as the default App Store lookup country. */
   regionCode?: string | null;
+  /** expo-updates runtime version embedded at build time (AndroidManifest / Expo.plist). */
+  embeddedRuntimeVersion?: string | null;
 }
 
 export type PlayStartResult = 'accepted' | 'canceled' | 'failed' | 'notStarted';

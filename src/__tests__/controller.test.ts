@@ -69,7 +69,7 @@ class FakeOta implements OtaAdapter {
   constructor(
     public available = false,
     public updateId: string | null = 'u-1',
-    public runtimeVersion = '3.3.0'
+    public runtimeVersion: string | null = '3.3.0'
   ) {}
   getRuntime() {
     return {
@@ -206,6 +206,41 @@ describe('UpwellController', () => {
       c.dismiss();
       expect(c.getState().decision).toMatchObject({ kind: 'ota.ready', applyMode: 'nextLaunch' });
       expect(c.getState().dismissed).toBe(true);
+    });
+
+    describe('runtime version', () => {
+      const stranded = policyFixture({
+        android: { ota: { latestRuntimeVersion: '3.4.0', strandedRequireAfterDays: 14 } },
+      });
+
+      it("falls back to the binary's embedded runtime when the OTA adapter has none", async () => {
+        // expo-updates reports no runtime in debug builds, whatever runtimeVersion policy is used.
+        const c = controller({
+          platform: platform({ installed: { embeddedRuntimeVersion: '3.3.0' } }),
+          ota: new FakeOta(false, null, null),
+          policy: staticSource(stranded),
+        });
+        const d = await c.check();
+        expect(c.getState().installed?.runtimeVersion).toBe('3.3.0');
+        expect(d).toMatchObject({ kind: 'store.recommended', reason: 'stranded' });
+      });
+
+      it('uses the embedded runtime without an OTA adapter', async () => {
+        const c = controller({
+          platform: platform({ installed: { embeddedRuntimeVersion: '3.3.0' } }),
+        });
+        await c.check();
+        expect(c.getState().installed?.runtimeVersion).toBe('3.3.0');
+      });
+
+      it("prefers the OTA adapter's runtime", async () => {
+        const c = controller({
+          platform: platform({ installed: { embeddedRuntimeVersion: '3.2.0' } }),
+          ota: new FakeOta(false, null, '3.3.0'),
+        });
+        await c.check();
+        expect(c.getState().installed?.runtimeVersion).toBe('3.3.0');
+      });
     });
 
     it('does not download when autoDownloadOta is false', async () => {

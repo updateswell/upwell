@@ -3,6 +3,7 @@ package expo.modules.upwell
 import android.app.Activity
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.os.Build
 import com.google.android.play.core.appupdate.AppUpdateInfo
 import com.google.android.play.core.appupdate.AppUpdateManager
@@ -23,6 +24,8 @@ import java.util.UUID
 private const val PREFS = "upwell"
 private const val REQUEST_CODE = 0x5577
 private const val INSTALL_STATE_EVENT = "onPlayInstallState"
+/** Written by expo-updates' config plugin at prebuild, already resolved from any runtimeVersion policy. */
+private const val RUNTIME_VERSION_META = "expo.modules.updates.EXPO_RUNTIME_VERSION"
 
 class UpwellModule : Module() {
   private val context: Context
@@ -81,7 +84,8 @@ class UpwellModule : Module() {
         "installer" to InstallSource.installerPackage(context),
         "installationId" to installationId(),
         "osVersion" to Build.VERSION.RELEASE,
-        "regionCode" to Locale.getDefault().country.ifEmpty { null }
+        "regionCode" to Locale.getDefault().country.ifEmpty { null },
+        "embeddedRuntimeVersion" to embeddedRuntimeVersion()
       )
     }
 
@@ -187,6 +191,18 @@ class UpwellModule : Module() {
     Activity.RESULT_CANCELED -> "canceled"
     ActivityResult.RESULT_IN_APP_UPDATE_FAILED -> "failed"
     else -> "failed"
+  }
+
+  /** Same read as expo-updates' UpdatesConfiguration, so both agree on the runtime. */
+  private fun embeddedRuntimeVersion(): String? {
+    val meta = try {
+      @Suppress("DEPRECATION")
+      context.packageManager.getApplicationInfo(context.packageName, PackageManager.GET_META_DATA).metaData
+    } catch (_: PackageManager.NameNotFoundException) {
+      null
+    }
+    @Suppress("DEPRECATION")
+    return meta?.get(RUNTIME_VERSION_META)?.toString()?.removePrefix("string:")?.ifEmpty { null }
   }
 
   private fun installationId(): String {

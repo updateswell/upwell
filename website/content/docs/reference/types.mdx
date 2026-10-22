@@ -20,7 +20,7 @@ interface InstalledInfo {
   appId: string;                 // package name / bundle identifier
   nativeVersion: string;         // versionName / CFBundleShortVersionString, for display
   buildNumber: string;           // versionCode / CFBundleVersion, for comparisons
-  runtimeVersion: string | null; // from the OTA adapter
+  runtimeVersion: string | null; // from the OTA adapter, else the runtime embedded in the binary
   otaUpdateId: string | null;
   installSource: 'play' | 'appStore' | 'testFlight' | 'sideload' | 'unknown';
   installationId: string;        // random per install, for rollout bucketing

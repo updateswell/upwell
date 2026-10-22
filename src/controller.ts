@@ -268,7 +268,7 @@ export class UpwellController {
     const runtime = this.ota?.getRuntime();
     const installed: InstalledInfo = {
       ...base,
-      runtimeVersion: runtime?.runtimeVersion ?? null,
+      runtimeVersion: runtime?.runtimeVersion || base.embeddedRuntimeVersion || null,
       otaUpdateId: runtime?.updateId ?? null,
     };
 

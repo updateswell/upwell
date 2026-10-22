@@ -16,6 +16,11 @@ export interface KeyValueStorage {
 
 export type BaseInstalledInfo = Omit<InstalledInfo, 'runtimeVersion' | 'otaUpdateId'> & {
   regionCode?: string | null;
+  /**
+   * Runtime version the binary was built with, as resolved by prebuild (any runtimeVersion
+   * policy). Used when the OTA adapter reports none, as expo-updates does in debug builds.
+   */
+  embeddedRuntimeVersion?: string | null;
 };
 
 export type StoreFlowResult =

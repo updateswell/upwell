@@ -27,6 +27,9 @@ public class UpwellModule: Module {
       if let region = Locale.current.region?.identifier {
         info["regionCode"] = region
       }
+      if let runtime = Self.embeddedRuntimeVersion() {
+        info["embeddedRuntimeVersion"] = runtime
+      }
       return info
     }
 
@@ -86,6 +89,18 @@ public class UpwellModule: Module {
     let id = UUID().uuidString
     UserDefaults.standard.set(id, forKey: key)
     return id
+  }
+
+  /// Runtime version expo-updates' config plugin wrote to Expo.plist at prebuild, already resolved
+  /// from any runtimeVersion policy. Same file and key expo-updates reads.
+  private static func embeddedRuntimeVersion() -> String? {
+    guard let path = Bundle.main.path(forResource: "Expo", ofType: "plist"),
+          let plist = NSDictionary(contentsOfFile: path),
+          let runtime = plist["EXUpdatesRuntimeVersion"] as? String,
+          !runtime.isEmpty else {
+      return nil
+    }
+    return runtime
   }
 
   /// The top-most presented view controller, so the sheet also shows above React Native modals.
