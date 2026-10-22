@@ -1,7 +1,8 @@
-# 05 · SDK cloud integration
+# 06 · SDK cloud integration
 
 **Goal:** pointing the SDK at Upwell Cloud is one line, the SDK gains an event stream that
-analytics (plan 06) can use, and self-hosting stays exactly as it is.
+analytics (plan 07) can use, and self-hosting stays exactly as it is. All in
+`upwell/packages/upwell` (event types in `packages/core`).
 
 ## Design
 
@@ -42,7 +43,7 @@ Common fields: platform, app version, build, runtime, update id, install source,
 timestamp, and the per-install random `installationId` the native module already generates.
 No device identifiers, no user ids, nothing personal.
 
-### Analytics reporter (used by plan 06)
+### Analytics reporter (used by plan 07)
 
 `analytics?: AnalyticsReporter` option: `{ track(event): void; flush(): Promise<void> }`.
 `upwellCloud()` provides one that batches events, keeps a small queue in the SDK's storage (so
@@ -58,7 +59,7 @@ say plainly.
 
 ## Session 1 · `upwellCloud()` and docs
 
-- [ ] `upwellCloud()` in `src/sources/` (exported from `upwell`), tests for URL building and
+- [ ] `upwellCloud()` in `packages/upwell/src/sources/` (exported from `upwell`), tests for URL building and
       options.
 - [ ] Example app: a "Cloud" preset that reads a real project on staging (behind an env var, so CI
       doesn't need the network).
@@ -67,7 +68,7 @@ say plainly.
 
 ## Session 2 · Event stream
 
-- [ ] Event types in `@upwell/core` (shared with the API's ingest validation in plan 06).
+- [ ] Event types in `@upwell/core` (shared with the API's ingest validation in plan 07).
 - [ ] `onEvent` in the controller; emit each event at the right place, with tests for each
       (simulation makes most of these easy: `createSimulation()` + actions).
 - [ ] `useAppUpdate()` unchanged; document `onEvent` in the controller and React references.
@@ -79,7 +80,7 @@ say plainly.
       failure, sampling option, `enabled` switch (and a global opt-out the app can wire to its own
       consent UI).
 - [ ] Wire it into `upwellCloud({ analytics: { key: 'uw_pk_…' } })`.
-- [ ] Verify on the emulator against staging: events arrive (needs plan 06 session 1).
+- [ ] Verify on the emulator against staging: events arrive (needs plan 07 session 1).
 - [ ] Docs: what is collected, how to disable it, what to declare in Google Play's Data safety form
       and Apple's App Privacy section (app interactions/diagnostics, not linked to identity, not
       used for tracking), and that analytics is off unless configured.

@@ -1,6 +1,6 @@
-# 08 · Dashboard
+# 09 · Dashboard
 
-**Goal:** a web UI at `app.upwell.run` (repo `updateswell/upwell-cloud`) over the same API the
+**Goal:** a web UI at `app.upwell.run` (`platform/apps/dashboard`) over the same API the
 CLI uses. It adds nothing the API can't do; it makes it visible and approachable for people who
 don't live in a terminal.
 
@@ -9,7 +9,7 @@ client and not where business logic lives.
 
 ## Scope (first version)
 
-- Sign-in, org and project switcher (needs plan 07).
+- Sign-in, org and project switcher (needs plan 08).
 - Policy editor per environment: a form for the common fields (latest, minimum, OTA runtime,
   apply mode, messages, rollout) plus a JSON view with schema validation, a diff before publishing,
   the guardrail confirmation with impact, history and one-click rollback.
@@ -23,13 +23,13 @@ client and not where business logic lives.
 
 - Every screen maps to API endpoints that already exist; if a screen needs new data, the API
   gets the endpoint first (and the CLI can use it too).
-- Follows the Upwell design system (monochrome, Geist Mono; see `BRAND.md` in `upwell-docs`).
+- Follows the Upwell design system (monochrome, Geist Mono; see `BRAND.md` in `platform`).
 
 ## Decisions to make when starting
 
-- Framework and hosting (Next.js on Vercel next to the docs, or Cloudflare with the API).
-- Charts library and how much of the docs site's UI components to share (copy, not a shared
-  package, in a polyrepo).
+- Hosting for the Next.js app: Vercel (like the landing) or Cloudflare (next to the API).
+- Charts library, and what to share with `apps/landing` through `platform/packages/` (design
+  tokens, UI components, the generated API client).
 
 ## Definition of done
 

@@ -1,7 +1,8 @@
-# 06 · Analytics
+# 07 · Analytics
 
 **Goal:** the platform answers the questions an app team actually has about updates, from events
-the SDK sends (plan 05):
+the SDK sends (plan 06). Ingest and stats live in `platform/apps/api`; the event types in
+`@upwell/core`; the reporter in `upwell`; `upwell stats` in `@upwell/cli`:
 
 - How many active installs are on each build and runtime? How many are stranded?
 - How fast is the new store version / OTA update being adopted?
@@ -42,7 +43,7 @@ daily rollup job (Cron Trigger) that writes aggregates to D1.
 | `GET …/stats/errors?days=7`                                | Error counts by context and build                      |
 | `GET …/stats/impact?minimumBuild=340&platform=android`     | Share of active installs a minimum would block         |
 
-The impact query plugs into the guardrail from plan 03: the `428 confirmation_required` response
+The impact query plugs into the guardrail from plan 04: the `428 confirmation_required` response
 includes "affects ~12% of active Android installs (last 7 days)".
 
 ### CLI
@@ -52,11 +53,11 @@ includes "affects ~12% of active Android installs (last 7 days)".
 
 ## Session 1 · Ingest
 
-- [ ] Event schema in `@upwell/core` (from plan 05), public keys, `POST /v1/events`, Analytics
+- [ ] Event schema in `@upwell/core` (from plan 06), public keys, `POST /v1/events`, Analytics
       Engine binding, rate limits, tests.
 - [ ] Usage counting: per-project event and CDN request counts (also data points) for future
       limits and billing.
-- [ ] End to end: SDK reporter (plan 05 session 3) on the emulator → events visible with a raw SQL
+- [ ] End to end: SDK reporter (plan 06 session 3) on the emulator → events visible with a raw SQL
       query.
 
 ## Session 2 · Stats endpoints and guardrail impact

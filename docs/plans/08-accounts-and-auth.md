@@ -1,10 +1,10 @@
-# 07 · Accounts and auth
+# 08 · Accounts and auth
 
 **Goal:** people can sign up, create organizations and projects, invite teammates and manage
 keys, without the owner hand-creating projects with the bootstrap token. This is what turns the
-private beta into a public product, and the dashboard (plan 08) depends on it.
+private beta into a public product, and the dashboard (plan 09) depends on it.
 
-Kept deliberately short: details depend on what's learned from plans 03–06 and early users. Fill
+Kept deliberately short: details depend on what's learned from plans 04–07 and early users. Fill
 in the sessions when this plan starts.
 
 ## Scope

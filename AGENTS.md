@@ -6,18 +6,23 @@ drives it end to end, from a remote `policy.json`. This repo is the npm package 
 JavaScript SDK, the Android (Kotlin) and iOS (Swift) Expo module, the config plugin, the JSON
 Schemas, and an example app.
 
-Upwell is becoming a platform (hosted API on Cloudflare, CLI, analytics, dashboard) spread over
-several repos. **Plans live in [`docs/plans/`](docs/plans/README.md)**; read its README for the
-order and status before starting platform work. `PLAN.md` is the original SDK plan (v1).
+Upwell is growing into a library with tools around it (this repo) plus a hosted platform (a
+separate repo). **Plans live in [`docs/plans/`](docs/plans/README.md)**; read its README for the
+order and status before starting that work. `PLAN.md` is the original SDK plan (v1).
 
 ## Repos
 
-| Repo                        | What                                                                                                             |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `updateswell/upwell` (this) | SDK, native modules, config plugin, schemas, example app                                                         |
-| `updateswell/upwell-docs`   | Landing (`upwell.run`) and docs (`docs.upwell.run`). Until plan 01 is done, the site is still in `website/` here |
-| `updateswell/upwell-api`    | Cloudflare Workers API (plan 03, not created yet)                                                                |
-| `updateswell/upwell-cli`    | `@upwell/cli` (plan 04, not created yet)                                                                         |
+| Repo                                              | What                                                                                                                       |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `updateswell/upwell` (this)                       | The library and what's tightly bound to it: SDK, `@upwell/core` (plan 02), `@upwell/cli` (plan 05), docs site, example app |
+| `updateswell/platform` (plan 03, not created yet) | The hosted product: landing page (`upwell.run`), Cloudflare API (`api.`/`cdn.upwell.run`), dashboard (`app.upwell.run`)    |
+
+Rule of thumb: someone adopting the library should only see the library and its tools here.
+Anything that is the hosted product goes to `platform`, which depends on this repo only through
+published npm packages and public URLs.
+
+Plan 01 turns this repo into a workspace (`packages/upwell`, `packages/core`, `packages/cli`,
+`apps/docs`). Until then the layout below applies.
 
 ## Layout
 
@@ -36,7 +41,7 @@ plugin/           config plugin (source in plugin/src, built to plugin/build)
 schemas/          policy and releases JSON Schemas (also served at upwell.run/schemas/*)
 example/          Expo app using the SDK from src/ (Metro maps `upwell/*` to src)
 docs/             recipes, example policy files, and plans/
-website/          docs site (moving to upwell-docs in plan 01)
+website/          docs + landing site (docs → apps/docs in plan 01; landing → platform in plan 03)
 ```
 
 ## Commands
@@ -91,7 +96,7 @@ the iOS module (macOS runner); there is no Mac locally, so Swift is only checked
 - Core logic (`src/core`, controller decisions) is test-first: add a failing test, then the change.
 - Commit messages: Conventional Commits with a scope where useful (`fix(ui): …`, `feat(core): …`,
   `ci(release): …`). Small changes go straight to `main` and are pushed; CI must stay green.
-- Docs live on the site (`website/content/docs/`, later `upwell-docs`); update them with
+- Docs live on the site (`website/content/docs/`, `apps/docs/` after plan 01); update them with
   behavior changes. The README is the npm landing page.
 
 ## Product rules
@@ -100,7 +105,7 @@ the iOS module (macOS runner); there is no Mac locally, so Swift is only checked
   "Apple compliant".
 - Self-hosting must keep working: any URL or custom source for the policy, no required account.
 - Design: monochrome (black, white, greys) and Geist Mono. Brand source of truth:
-  `assets/brand/README.md` (moving to `BRAND.md` in `upwell-docs`).
+  `assets/brand/README.md` (moving to `BRAND.md` in `platform` in plan 03).
 - The policy and releases documents are public (apps download them); never put secrets in them.
 
 ## Known follow-ups

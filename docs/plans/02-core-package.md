@@ -1,96 +1,71 @@
-# 02 · `@upwell/core`: a dependency-free shared package
+# 02 · `@upwell/core`
 
-**Goal:** the policy/releases types, validators and decision engine are published as
-`@upwell/core`, a package with zero dependencies that runs in React Native, Node and Cloudflare
-Workers. `upwell` depends on it and re-exports it, so nothing changes for SDK users.
+**Goal:** the library's pure logic (policy and releases types, validation, the decision engine,
+version comparison, rollout bucketing) is published as `@upwell/core`: no dependencies, runs in
+React Native, Node and Cloudflare Workers. `upwell` depends on it and re-exports it, so nothing
+changes for SDK users.
 
-**Why:** the API (plan 03) must validate policies exactly like the SDK, and the CLI (plan 04)
-must validate and `explain()` locally. They can't depend on `upwell`: it has required peer
-dependencies (`expo`, `react`, `react-native`), and npm 7+ installs required peers automatically,
-so a Worker or a CLI would pull in React Native.
+**Why:** the API (`platform`, plan 04) must reject exactly the policies the SDK rejects, and the
+CLI (plan 05) runs `validate` and `explain` on a developer's machine. Neither can depend on
+`upwell`: its required peer dependencies (`expo`, `react`, `react-native`) are installed
+automatically by npm, which would pull React Native into a Worker or a CLI.
 
-`src/core/` is already pure: its files only import each other (checked 2026-10-22). This plan is
-mostly moving files and release plumbing.
+**What users notice:** nothing. `npx expo install upwell` installs `upwell` plus `@upwell/core`.
+The code moves; it isn't added. `src/core` is about 29 KB of runtime JavaScript today, and the
+`upwell` tarball is 100 KB. `src/core` already imports nothing outside itself (checked
+2026-10-22).
 
 ## Decisions
 
-- **Workspace layout** (proposed): `packages/upwell/` (the SDK, moved from the root) and
-  `packages/core/`, with a private root `package.json` using npm workspaces. Changesets versions
-  workspace packages but, as far as I know, not a publishable root package, so the SDK moves into
-  `packages/` instead of staying at the root. Verify this before session 1; if Changesets does
-  handle a published root, keeping the SDK at the root is a smaller change.
 - **Lockstep versions:** Changesets `fixed: [["upwell", "@upwell/core"]]`. `upwell@0.4.0` always
-  pairs with `@upwell/core@0.4.0`, which keeps the compatibility story trivial for the API and CLI.
-- **Schemas live in core** (`packages/core/schemas/`), exported as `@upwell/core/schemas/*`.
-  `upwell` keeps exporting `upwell/schemas/*` (copied at build) so existing `$schema` users and
-  `upwell.run/schemas/*` keep working.
-- **Module format:** ESM and CJS builds with type declarations. Workers and bundlers use ESM; the
-  SDK's Metro build and Jest keep working with CJS.
+  pairs with `@upwell/core@0.4.0`. `@upwell/cli` (plan 05) versions independently.
+- **Schemas live in core** (`packages/core/schemas/`, exported as `@upwell/core/schemas/*`).
+  `upwell` keeps exporting `upwell/schemas/*` (copied at build) so nothing breaks for existing
+  users.
+- **Module format:** ESM + CJS + type declarations. Workers and bundlers use ESM; Metro and Jest
+  keep working.
+- **Event types** for analytics (plan 06/07) will also live here.
 
-## Session 1 · Move the SDK into `packages/upwell`
+## Session 1 · Create `packages/core`
 
-Behavior must not change in this session; only paths.
-
-- [ ] Record the current published file list: `npm pack --dry-run --json > /tmp/pack-before.json`.
-- [ ] `git mv` the SDK into `packages/upwell/`: `src`, `android`, `ios`, `plugin`, `schemas`,
-      `app.plugin.js`, `expo-module.config.json`, `babel.config.js`, `jest.config.js`,
-      `tsconfig*.json`, `package.json`, `README.md`, `CHANGELOG.md`, `LICENSE`, `.npmignore`. Keep
-      `example/`, `docs/`, `.github/`, `.changeset/` and `PLAN.md` at the root.
-- [ ] Root `package.json`: `private: true`, `workspaces: ["packages/*"]`, scripts that run the
-      workspace scripts (`npm run test --workspaces`, …), and the shared dev tooling (eslint,
-      prettier, changesets).
-- [ ] Example app: update `example/package.json` (`expo.autolinking.nativeModulesDir`),
-      `example/metro.config.js` (watch folder and the `sources` map now under
-      `packages/upwell/src`) and the `../app.plugin.js` plugin path in `example/app.json`.
-- [ ] CI (`.github/workflows/ci.yml`): working directories and `npm pack` path. Release workflow:
-      Changesets finds workspace packages on its own; check the publish step and the
-      `npm pack` plan step still point at the right package.
-- [ ] Verify: lint, typecheck, tests, build; `npm pack --dry-run --json` from `packages/upwell`
-      lists the same files as before (diff the two JSON files); the example builds on Android
-      (`./gradlew :upwell:compileDebugKotlin :upwell:testDebugUnitTest`) and runs in the emulator;
-      CI's iOS job passes.
-- [ ] Update `AGENTS.md` (paths and commands).
-
-## Session 2 · Create `packages/core`
-
-- [ ] `git mv packages/upwell/src/core packages/core/src` and the schemas into
-      `packages/core/schemas`. Move the core tests with them (`src/core/__tests__`).
+- [ ] `git mv packages/upwell/src/core packages/core/src` (tests move with it) and
+      `packages/upwell/schemas` → `packages/core/schemas`.
 - [ ] `packages/core/package.json`: name `@upwell/core`, `sideEffects: false`, `exports` for `.`
-      and `./schemas/*`, no `dependencies`, no `peerDependencies`, `publishConfig.access: public`,
-      `files: ["dist", "schemas"]`, `engines` (Node ≥ 18).
-- [ ] Build with `tsdown` (or two `tsc` runs) to `dist/` as ESM + CJS + `.d.ts`.
-- [ ] Tests run under plain Node (Jest or Vitest, no React Native preset): this proves core
-      has no React Native dependency. Add a test that fails if any file in `src/` imports
-      something outside the package.
-- [ ] `upwell`: add `"@upwell/core": "<same version>"` to `dependencies`; replace internal
-      `../core` imports with `@upwell/core`; `src/index.ts` re-exports `export * from '@upwell/core'`
-      so the public API is unchanged. Copy `schemas/` from core during `upwell`'s build.
-- [ ] Check the SDK's type declarations and the example app still resolve (Metro resolves the
-      workspace package; add it to the example's `sources` map if needed).
-- [ ] Verify everything from session 1 again, plus: `node -e "require('@upwell/core')"` and an
-      ESM import from a scratch Node project work, and a tiny Worker (`wrangler dev` or the Vitest
-      Workers pool) can import and run `validatePolicy` and `explain`.
+      and `./schemas/*`, no `dependencies` or `peerDependencies`, `files: ["dist", "schemas"]`,
+      `publishConfig.access: public`, `engines.node >= 18`, same repository/homepage/license
+      fields as `upwell`.
+- [ ] Build to `dist/` as ESM + CJS + `.d.ts` (`tsdown`, or two `tsc` runs).
+- [ ] Tests run under plain Node (Jest without the React Native preset, or Vitest), which
+      proves there's no React Native dependency. Add a test that fails if a file in `src/` imports
+      anything outside the package.
+- [ ] `upwell`: add `"@upwell/core"` to `dependencies` (exact range matching the fixed version);
+      replace internal `../core` imports with `@upwell/core`; `src/index.ts` keeps exporting the
+      same names (`export * from '@upwell/core'`); copy core's `schemas/` into `upwell` during its
+      build.
+- [ ] Example app: add `@upwell/core` to the Metro `sources` map (→ `packages/core/src`) so edits
+      show up without building.
+- [ ] Docs: `apps/docs/scripts/copy-schemas.mjs` reads `../../packages/core/schemas`; Vercel's
+      ignored build step watches that path instead.
+- [ ] Verify: everything from plan 01 session 1 (lint, typecheck, tests, build, identical
+      `upwell` public API, example on the emulator, CI), plus `require('@upwell/core')` and an ESM
+      import from a scratch Node project, and a tiny Worker (Vitest Workers pool or `wrangler dev`)
+      running `validatePolicy` and `explain`.
 
-## Session 3 · Publish
+## Session 2 · Publish
 
-- [ ] Changesets config: `fixed: [["upwell", "@upwell/core"]]`. Add a changeset (minor) for both.
+- [ ] Changesets: the `fixed` group and a minor changeset for both packages.
 - [ ] npm trusted publishing is configured per package, and the package must exist first. The
-      user publishes `@upwell/core` once by hand (`npm publish --access public` from
-      `packages/core`, version `0.0.0-bootstrap` or the first real version), then adds the
-      trusted publisher on npmjs.com: repo `updateswell/upwell`, workflow `release.yml`,
-      environment `upwell-gh-ci` (same as `upwell`).
-- [ ] Merge the release PR and check both packages publish with provenance.
-- [ ] In a scratch directory: `npm i @upwell/core` installs exactly one package (`npm ls --all`).
-- [ ] Docs (in `upwell-docs` if plan 01 is done): a short "@upwell/core" reference page and a note
-      that `upwell` re-exports it.
+      user publishes `@upwell/core` once by hand from `packages/core`
+      (`npm publish --access public`), then adds the trusted publisher on npmjs.com: repo
+      `updateswell/upwell`, workflow `release.yml`, environment `upwell-gh-ci`.
+- [ ] Merge the release PR; check both packages publish with provenance.
+- [ ] Scratch directory: `npm i @upwell/core` installs exactly one package (`npm ls --all`);
+      `npm i upwell` installs `upwell` + `@upwell/core` and nothing else new.
+- [ ] Docs: a short `@upwell/core` reference page (what it is, that `upwell` re-exports it, when to
+      use it directly: servers, scripts, tests).
 
 ## Definition of done
 
-- `@upwell/core` is on npm with no dependencies and works in Node and Workers.
-- `upwell` depends on it, re-exports it, and its public API and published files are unchanged.
-- One validator and one engine across SDK, API and CLI.
-
-## Open questions
-
-- Keep Jest for the SDK and use Vitest for core, or move everything to Vitest? Not required here;
-  don't mix the migration into this plan.
+- `@upwell/core` is on npm, has no dependencies, and works in Node and Workers.
+- `upwell` depends on it, re-exports it, and its public API is unchanged.
+- One validator and one engine for the SDK, the CLI and the API.
