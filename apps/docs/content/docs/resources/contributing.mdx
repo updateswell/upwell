@@ -12,9 +12,12 @@ pull requests are welcome.
 <Files>
   <Folder name="upwell" defaultOpen>
     <Folder name="packages" defaultOpen>
+      <Folder name="core (published as @upwell/core)" defaultOpen>
+        <File name="src/ (types, validation, decision engine, versions, rollout)" />
+        <File name="schemas/ (JSON Schemas)" />
+      </Folder>
       <Folder name="upwell (the SDK, published as upwell)" defaultOpen>
         <Folder name="src" defaultOpen>
-          <File name="core/ (decision engine, validation, versions)" />
           <File name="controller.ts" />
           <File name="react/" />
           <File name="ui/" />
@@ -24,7 +27,6 @@ pull requests are welcome.
         <File name="android/ (Kotlin, Play Core)" />
         <File name="ios/ (Swift, StoreKit)" />
         <File name="plugin/ (config plugin)" />
-        <File name="schemas/ (JSON Schemas)" />
       </Folder>
     </Folder>
     <Folder name="apps">
@@ -45,8 +47,9 @@ npm run lint && npm run typecheck
 npx changeset                     # describe your change for the changelog
 ```
 
-Engine changes start with a table test in `packages/upwell/src/core/__tests__`. `decide()` is
-pure, so every rule can be covered without a device.
+Engine changes start with a table test in `packages/core/src/__tests__`. `decide()` is pure, so
+every rule can be covered without a device. `@upwell/core` has no dependencies and its tests run
+in plain Node; `upwell` depends on it and re-exports everything it exports.
 
 Android native code needs JDK 21 for Gradle. iOS native code is compiled in CI on macOS.
 

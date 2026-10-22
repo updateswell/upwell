@@ -1,0 +1,72 @@
+{
+  "name": "@upwell/core",
+  "version": "0.1.4",
+  "description": "Upwell's policy and releases types, validation and decision engine. No dependencies; runs in React Native, Node and Workers",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.cts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./schemas/*": "./schemas/*",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "schemas"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsdown",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json",
+    "test": "jest",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "upwell",
+    "react-native",
+    "expo",
+    "app-update",
+    "force-update",
+    "ota",
+    "policy"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/updateswell/upwell.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/updateswell/upwell/issues"
+  },
+  "author": "ommgh <om.works01@gmail.com> (https://github.com/ommgh)",
+  "license": "MIT",
+  "homepage": "https://upwell.run",
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/plugin-transform-modules-commonjs": "^7.29.7",
+    "@babel/preset-typescript": "^7.29.7",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.20.5",
+    "ajv": "^8.20.0",
+    "babel-jest": "^30.5.2",
+    "jest": "^30.5.2",
+    "tsdown": "^0.23.1",
+    "typescript": "~6.0.3"
+  }
+}

@@ -1,3 +1,4 @@
+import type { Decision, Release, StoreFlow } from '@upwell/core';
 import {
   createContext,
   type ReactNode,
@@ -15,7 +16,6 @@ import {
   type UpwellOptions,
   type UpwellState,
 } from '../controller';
-import type { Decision, Release, StoreFlow } from '../core/types';
 import type { SimulationOptions, SimulationScenario } from '../simulation';
 
 const UpwellContext = createContext<UpwellController | null>(null);

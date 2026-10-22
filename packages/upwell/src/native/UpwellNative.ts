@@ -1,6 +1,5 @@
+import type { InstallSource, PlayInstallStatus, PlayStoreInfo } from '@upwell/core';
 import { type EventSubscription, type NativeModule, requireOptionalNativeModule } from 'expo';
-
-import type { InstallSource, PlayInstallStatus, PlayStoreInfo } from '../core/types';
 
 export interface NativeInstalledInfo {
   appId: string;

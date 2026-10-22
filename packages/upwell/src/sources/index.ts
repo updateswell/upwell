@@ -1,4 +1,4 @@
-import type { Policy, ReleasesDocument } from '../core/types';
+import type { Policy, ReleasesDocument } from '@upwell/core';
 
 export interface Source<T> {
   fetch(signal: AbortSignal): Promise<T>;

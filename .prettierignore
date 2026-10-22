@@ -1,5 +1,7 @@
 packages/*/build
 packages/upwell/plugin/build
+packages/*/dist
+packages/upwell/schemas
 example
 **/coverage
 node_modules

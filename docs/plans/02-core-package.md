@@ -25,24 +25,34 @@ The code moves; it isn't added. `src/core` is about 29 KB of runtime JavaScript 
 - **Module format:** ESM + CJS + type declarations. Workers and bundlers use ESM; Metro and Jest
   keep working.
 - **Event types** for analytics (plan 06/07) will also live here.
+- **Build with tsdown** (decided in session 1): one bundled file per format (`dist/index.mjs`,
+  `dist/index.cjs`, `.d.mts`, `.d.cts`), so the sources keep extensionless imports and Node ESM
+  still works. Two `tsc` runs would need `.js` extensions on every import.
+- **Tests: Jest in plain Node** (`testEnvironment: 'node'`, Babel only strips types), so the
+  tests and `npm test -- --ci --coverage` stay as they were.
+- **In-repo, `upwell` uses core's sources**: tsconfig `paths`, Jest `moduleNameMapper` and the
+  example's Metro map point at `packages/core/src`. Only `upwell`'s build (`tsconfig.build.json`
+  resets `paths`) reads `packages/core/dist`, like users do. `npm install`/`npm ci` run core's
+  `prepare` before `upwell`'s because `upwell` depends on it.
+- **`packages/upwell/schemas` is gitignored** and copied from core by `upwell`'s build.
 
 ## Session 1 · Create `packages/core`
 
-- [ ] `git mv packages/upwell/src/core packages/core/src` (tests move with it) and
+- [x] `git mv packages/upwell/src/core packages/core/src` (tests move with it) and
       `packages/upwell/schemas` → `packages/core/schemas`.
-- [ ] `packages/core/package.json`: name `@upwell/core`, `sideEffects: false`, `exports` for `.`
+- [x] `packages/core/package.json`: name `@upwell/core`, `sideEffects: false`, `exports` for `.`
       and `./schemas/*`, no `dependencies` or `peerDependencies`, `files: ["dist", "schemas"]`,
       `publishConfig.access: public`, `engines.node >= 18`, same repository/homepage/license
       fields as `upwell`.
-- [ ] Build to `dist/` as ESM + CJS + `.d.ts` (`tsdown`, or two `tsc` runs).
-- [ ] Tests run under plain Node (Jest without the React Native preset, or Vitest), which
+- [x] Build to `dist/` as ESM + CJS + `.d.ts` (`tsdown`, or two `tsc` runs).
+- [x] Tests run under plain Node (Jest without the React Native preset, or Vitest), which
       proves there's no React Native dependency. Add a test that fails if a file in `src/` imports
       anything outside the package.
-- [ ] `upwell`: add `"@upwell/core"` to `dependencies` (exact range matching the fixed version);
+- [x] `upwell`: add `"@upwell/core"` to `dependencies` (exact range matching the fixed version);
       replace internal `../core` imports with `@upwell/core`; `src/index.ts` keeps exporting the
       same names (`export * from '@upwell/core'`); copy core's `schemas/` into `upwell` during its
       build.
-- [ ] Example app: add `@upwell/core` to the Metro `sources` map (→ `packages/core/src`) so edits
+- [x] Example app: add `@upwell/core` to the Metro `sources` map (→ `packages/core/src`) so edits
       show up without building.
 - [ ] Docs: `apps/docs/scripts/copy-schemas.mjs` reads `../../packages/core/schemas`; Vercel's
       ignored build step watches that path instead.

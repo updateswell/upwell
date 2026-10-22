@@ -1,4 +1,4 @@
-export * from './core';
+export * from '@upwell/core';
 export { UpwellController, createUpwell, type UpwellOptions, type UpwellState } from './controller';
 export type { OtaAdapter, OtaCheckResult, OtaRuntime } from './ota/types';
 export {

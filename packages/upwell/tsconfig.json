@@ -14,7 +14,10 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "types": ["jest"],
-    "noEmit": true
+    "noEmit": true,
+    // Typecheck against core's sources so edits there show up without building it. The build
+    // (tsconfig.build.json) resets this and uses the built package, like users do.
+    "paths": { "@upwell/core": ["../core/src/index.ts"] }
   },
-  "include": ["src", "../../docs/examples/*.json", "schemas/*.json"]
+  "include": ["src"]
 }

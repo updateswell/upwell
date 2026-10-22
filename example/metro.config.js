@@ -3,7 +3,7 @@ const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..');
-const sdk = path.join(root, 'packages/upwell');
+const packages = path.join(root, 'packages');
 const config = getDefaultConfig(__dirname);
 
 // Let Metro read the SDK's files in the repo. `experiments.autolinkingModuleResolution` in
@@ -11,16 +11,18 @@ const config = getDefaultConfig(__dirname);
 // in ../node_modules to the copies that autolinking uses for this app.
 config.watchFolders = [root];
 
-// Resolve `upwell` to its TypeScript sources so edits show up without rebuilding the package.
+// Resolve `upwell` and `@upwell/core` to their TypeScript sources so edits show up without
+// rebuilding the packages.
 const sources = {
-  upwell: 'src/index.ts',
-  'upwell/react': 'src/react/index.tsx',
-  'upwell/ui': 'src/ui/index.ts',
-  'upwell/expo-updates': 'src/expo-updates/index.ts',
+  upwell: 'upwell/src/index.ts',
+  'upwell/react': 'upwell/src/react/index.tsx',
+  'upwell/ui': 'upwell/src/ui/index.ts',
+  'upwell/expo-updates': 'upwell/src/expo-updates/index.ts',
+  '@upwell/core': 'core/src/index.ts',
 };
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   const source = sources[moduleName];
-  if (source) return { type: 'sourceFile', filePath: path.join(sdk, source) };
+  if (source) return { type: 'sourceFile', filePath: path.join(packages, source) };
   return context.resolveRequest(context, moduleName, platform);
 };
 

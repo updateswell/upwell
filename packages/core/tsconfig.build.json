@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // No Node, DOM or React Native globals: core has to run anywhere.
+    "types": []
+  },
+  "include": ["src"],
+  "exclude": ["src/**/__tests__"]
+}

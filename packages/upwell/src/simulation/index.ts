@@ -1,5 +1,3 @@
-import { Platform } from 'react-native';
-
 import type {
   AppStoreInfo,
   Platform as PlatformName,
@@ -8,7 +6,9 @@ import type {
   ReleasesDocument,
   StoreFlow,
   StoreInfo,
-} from '../core/types';
+} from '@upwell/core';
+import { Platform } from 'react-native';
+
 import { getUpwellNative, type PlaySimulationConfig } from '../native/UpwellNative';
 import type { OtaAdapter, OtaCheckResult, OtaRuntime } from '../ota/types';
 import { createMemoryStorage } from '../platform/memoryStorage';
