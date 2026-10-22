@@ -395,6 +395,9 @@ const local = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
+    // Android hit-tests by zIndex and render order, not elevation: without this, views rendered
+    // after <UpwellUI /> (toasts, tab bars, LogBox) take the prompt's taps while drawn below it.
+    zIndex: 1000,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
