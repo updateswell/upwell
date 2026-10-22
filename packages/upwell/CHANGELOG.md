@@ -1,5 +1,11 @@
 # upwell
 
+## 0.1.4
+
+### Patch Changes
+
+- ff0328f: Move the package to `packages/upwell` in the repository; README links now point to absolute URLs.
+
 ## 0.1.3
 
 ### Patch Changes
