@@ -1,6 +1,6 @@
 {
   "name": "@upwell/core",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "Upwell's policy and releases types, validation and decision engine. No dependencies; runs in React Native, Node and Workers",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",

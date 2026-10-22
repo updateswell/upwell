@@ -1,6 +1,6 @@
 {
   "name": "upwell",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "Update orchestrator for React Native & Expo: OTA, Play in-app updates and App Store prompts driven by one policy",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -82,7 +82,7 @@
   "license": "MIT",
   "homepage": "https://upwell.run",
   "dependencies": {
-    "@upwell/core": "0.1.4"
+    "@upwell/core": "0.2.0"
   },
   "peerDependencies": {
     "expo": "*",
