@@ -32,7 +32,7 @@ function MermaidContent({ chart }: { chart: string }) {
   const { default: mermaid } = use(cachePromise('mermaid', () => import('mermaid')));
 
   const dark = resolvedTheme === 'dark';
-  // Monochrome, per the Upwell design system (assets/brand/README.md).
+  // Monochrome, per the Upwell design system (https://github.com/updateswell/platform/blob/main/BRAND.md).
   const fg = dark ? '#fafafa' : '#0a0a0a';
   const surface = dark ? '#111111' : '#ffffff';
   const muted = dark ? '#a3a3a3' : '#737373';

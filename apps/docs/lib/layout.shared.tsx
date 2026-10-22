@@ -1,6 +1,6 @@
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
-import { BookOpenIcon, HouseIcon, PackageIcon } from 'lucide-react';
-import { appName, docsHref, githubUrl, npmUrl, siteMode, siteUrl } from './shared';
+import { HouseIcon, PackageIcon } from 'lucide-react';
+import { appName, githubUrl, npmUrl, siteUrl } from './shared';
 
 /** The Upwell mark, in the current text color. */
 export function Logo({ className = 'h-6' }: { className?: string }) {
@@ -19,22 +19,14 @@ export function baseOptions(): BaseLayoutProps {
     },
     githubUrl,
     links: [
-      siteMode === 'docs'
-        ? {
-            type: 'icon',
-            icon: <HouseIcon />,
-            text: 'upwell.run',
-            label: 'Upwell home',
-            url: siteUrl,
-            external: true,
-          }
-        : {
-            icon: <BookOpenIcon />,
-            text: 'Documentation',
-            url: docsHref('/docs'),
-            active: 'nested-url',
-            on: 'nav',
-          },
+      {
+        type: 'icon',
+        icon: <HouseIcon />,
+        text: 'upwell.run',
+        label: 'Upwell home',
+        url: siteUrl,
+        external: true,
+      },
       {
         type: 'icon',
         icon: <PackageIcon />,

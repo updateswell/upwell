@@ -1,7 +1,7 @@
 <a href="https://upwell.run">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/banner-dark.png">
-    <img src="assets/brand/banner-light.png" alt="Upwell: updates that rise up on their own. Update orchestrator for React Native and Expo.">
+    <source media="(prefers-color-scheme: dark)" srcset="https://upwell.run/brand/banner-dark.png">
+    <img src="https://upwell.run/brand/banner-light.png" alt="Upwell: updates that rise up on their own. Update orchestrator for React Native and Expo.">
   </picture>
 </a>
 

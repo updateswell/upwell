@@ -8,8 +8,7 @@
     "start": "next start",
     "types:check": "next typegen && tsc --noEmit",
     "predev": "node scripts/copy-schemas.mjs",
-    "prebuild": "node scripts/copy-schemas.mjs",
-    "social": "./scripts/social.sh"
+    "prebuild": "node scripts/copy-schemas.mjs"
   },
   "dependencies": {
     "cn": "^0.5.0",

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isMarkdownPreferred, rewritePath } from 'fumadocs-core/negotiation';
-import { docsContentRoute, docsUrl, siteMode } from '@/lib/shared';
+import { docsContentRoute } from '@/lib/shared';
 
-// Docs pages always live under /docs internally; see `siteMode` for how they are exposed.
+// Docs pages live under /docs internally and are served at the root (docs.upwell.run/quick-start).
 const { rewrite: rewriteDocs } = rewritePath('/docs{/*path}', `${docsContentRoute}{/*path}/content.md`);
 const { rewrite: rewriteSuffix } = rewritePath('/docs{/*path}.md', `${docsContentRoute}{/*path}/content.md`);
 
 /** Paths that are not docs pages: framework, API, generated files and public assets. */
-const NOT_DOCS = /^\/(_next|api|og|llms\.mdx|llms\.txt|llms-full\.txt|card|schemas)(\/|$)|\.(svg|png|ico|txt|xml|json|webmanifest)$/;
+const NOT_DOCS = /^\/(_next|api|og|llms\.mdx|llms\.txt|llms-full\.txt|schemas)(\/|$)|\.(svg|png|ico|txt|xml|json|webmanifest)$/;
 
 function isDocsPath(path: string) {
   return path === '/docs' || path.startsWith('/docs/');
@@ -17,18 +17,11 @@ export default function proxy(request: NextRequest) {
   const url = request.nextUrl;
   let path = url.pathname;
 
-  if (siteMode === 'site' && isDocsPath(path)) {
-    // upwell.run/docs/x → docs.upwell.run/x
-    return NextResponse.redirect(`${docsUrl}${path.slice('/docs'.length) || '/'}${url.search}`, 308);
+  if (isDocsPath(path)) {
+    // Old URLs (docs.upwell.run/docs/x, upwell-docs.vercel.app/docs/x) → /x
+    return NextResponse.redirect(new URL(`${path.slice('/docs'.length) || '/'}${url.search}`, url), 308);
   }
-
-  if (siteMode === 'docs') {
-    if (isDocsPath(path)) {
-      // Old URLs (docs.upwell.run/docs/x, upwell-docs.vercel.app/docs/x) → /x
-      return NextResponse.redirect(new URL(`${path.slice('/docs'.length) || '/'}${url.search}`, url), 308);
-    }
-    if (!NOT_DOCS.test(path)) path = `/docs${path === '/' ? '' : path}`;
-  }
+  if (!NOT_DOCS.test(path)) path = `/docs${path === '/' ? '' : path}`;
 
   const suffix = rewriteSuffix(path);
   if (suffix) return NextResponse.rewrite(new URL(suffix, url));

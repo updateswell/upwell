@@ -2,7 +2,7 @@
 @import 'fumadocs-ui/css/black.css';
 @import 'fumadocs-ui/css/preset.css';
 
-/* Upwell design system: monochrome. Source of truth: assets/brand/README.md */
+/* Upwell design system: monochrome. Source of truth: https://github.com/updateswell/platform/blob/main/BRAND.md */
 @theme {
   --color-fd-background: #fafafa;
   --color-fd-foreground: #0a0a0a;
@@ -70,53 +70,4 @@ html > body[data-scroll-locked] {
   background-color: currentColor;
   mask: url('/logo.svg') center / contain no-repeat;
   -webkit-mask: url('/logo.svg') center / contain no-repeat;
-}
-
-/* 45° hairline hatching for bands between sections. */
-.upwell-hatch {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    var(--color-fd-border) 0 1px,
-    transparent 1px 7px
-  );
-}
-
-/* Dotted (dithered) offset shadow for cards. */
-.upwell-dither-shadow {
-  position: relative;
-}
-.upwell-dither-shadow::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  transform: translate(6px, 6px);
-  background-image: radial-gradient(var(--color-fd-muted-foreground) 0.8px, transparent 0.9px);
-  background-size: 3px 3px;
-  opacity: 0.55;
-  z-index: -1;
-}
-
-/* Small "+" marks where grid lines cross. */
-.upwell-cross {
-  position: absolute;
-  width: 11px;
-  height: 11px;
-  translate: -50% -50%;
-  background:
-    linear-gradient(var(--color-fd-muted-foreground), var(--color-fd-muted-foreground)) center / 1px 100% no-repeat,
-    linear-gradient(var(--color-fd-muted-foreground), var(--color-fd-muted-foreground)) center / 100% 1px no-repeat;
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-/* Tighter tracking for large monospace headings. */
-.upwell-display {
-  letter-spacing: -0.04em;
-  word-spacing: -0.28em;
-}
-
-/* Social image cards (/card/*) are captured at exact sizes: no scrollbar gutter. */
-html:has(#card) {
-  scrollbar-gutter: auto;
-  overflow: hidden;
 }

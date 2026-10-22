@@ -11,18 +11,18 @@ session.
 
 ## Order
 
-| #   | Plan                                                                 | Repo                 | Depends on                 | Status      |
-| --- | -------------------------------------------------------------------- | -------------------- | -------------------------- | ----------- |
-| 00  | [Architecture and decisions](00-architecture.md)                     | both                 | —                          | Read first  |
-| 01  | [Restructure `upwell` into a workspace](01-workspace-restructure.md) | `upwell`             | —                          | Done        |
-| 02  | [`@upwell/core`](02-core-package.md)                                 | `upwell`             | 01                         | Done        |
-| 03  | [`platform` repo and the landing page](03-platform-and-landing.md)   | `platform` (new)     | 01                         | Not started |
-| 04  | [API: hosting on Cloudflare](04-api.md)                              | `platform`           | 02, 03                     | Not started |
-| 05  | [CLI](05-cli.md)                                                     | `upwell`             | 02 (04 for cloud commands) | Not started |
-| 06  | [SDK cloud integration](06-sdk-cloud.md)                             | `upwell`             | 04                         | Not started |
-| 07  | [Analytics](07-analytics.md)                                         | `platform`, `upwell` | 04, 06                     | Not started |
-| 08  | [Accounts and auth](08-accounts-and-auth.md)                         | `platform`           | 04                         | Later       |
-| 09  | [Dashboard](09-dashboard.md)                                         | `platform`           | 07, 08                     | Last        |
+| #   | Plan                                                                                                                            | Repo                 | Depends on                 | Status      |
+| --- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------- | -------------------------- | ----------- |
+| 00  | [Architecture and decisions](00-architecture.md)                                                                                | both                 | —                          | Read first  |
+| 01  | [Restructure `upwell` into a workspace](01-workspace-restructure.md)                                                            | `upwell`             | —                          | Done        |
+| 02  | [`@upwell/core`](02-core-package.md)                                                                                            | `upwell`             | 01                         | Done        |
+| 03  | [`platform` repo and the landing page](https://github.com/updateswell/platform/blob/main/docs/plans/03-platform-and-landing.md) | `platform`           | 01                         | Done        |
+| 04  | [API: hosting on Cloudflare](https://github.com/updateswell/platform/blob/main/docs/plans/04-api.md)                            | `platform`           | 02, 03                     | Not started |
+| 05  | [CLI](05-cli.md)                                                                                                                | `upwell`             | 02 (04 for cloud commands) | Not started |
+| 06  | [SDK cloud integration](06-sdk-cloud.md)                                                                                        | `upwell`             | 04                         | Not started |
+| 07  | [Analytics](https://github.com/updateswell/platform/blob/main/docs/plans/07-analytics.md)                                       | `platform`, `upwell` | 04, 06                     | Not started |
+| 08  | [Accounts and auth](https://github.com/updateswell/platform/blob/main/docs/plans/08-accounts-and-auth.md)                       | `platform`           | 04                         | Later       |
+| 09  | [Dashboard](https://github.com/updateswell/platform/blob/main/docs/plans/09-dashboard.md)                                       | `platform`           | 07, 08                     | Last        |
 
 After 01, plans 02 and 03 are independent. The CLI's local commands (05, sessions 1–2) only need
 02, so they can ship before the API exists. The path to a usable hosted product is
@@ -39,6 +39,8 @@ points the SDK at it without hosting anything.
   before the session that needs them, and move the answer into the plan's decisions.
 - Decisions marked **(proposed)** are recommendations, not settled. Confirm or change them when
   the plan starts.
-- Plans for the `platform` repo live here until that repo exists; plan 03 moves them (and keeps a
-  pointer here).
+- Plans for the `platform` repo (03, 04, 07, 08, 09) live in
+  [`updateswell/platform/docs/plans`](https://github.com/updateswell/platform/tree/main/docs/plans)
+  since plan 03 finished; the links above point there. Keep the status column in both READMEs
+  in sync.
 - When something here turns out wrong, fix the plan instead of working around it.

@@ -33,7 +33,7 @@ export async function GET(_req: Request, { params }: RouteContext<'/og/docs/[...
     medium && { name: 'Geist Mono', data: medium, weight: 500 as const },
   ].filter((f): f is NonNullable<typeof f> => !!f);
 
-  // Monochrome, per the Upwell design system (assets/brand/README.md).
+  // Monochrome, per the Upwell design system (https://github.com/updateswell/platform/blob/main/BRAND.md).
   return new ImageResponse(
     (
       <div

@@ -63,7 +63,7 @@ export const defaultStrings: UpwellStrings = {
   kind: { fix: 'Fix', content: 'Content', feature: 'Feature' },
 };
 
-/** Monochrome, per the Upwell design system (assets/brand/README.md). */
+/** Monochrome, per the Upwell design system (https://github.com/updateswell/platform/blob/main/BRAND.md). */
 export const lightTheme: UpwellTheme = {
   colors: {
     background: '#FFFFFF',

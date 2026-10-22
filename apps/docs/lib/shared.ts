@@ -7,29 +7,16 @@ export const appDescription =
 export const siteUrl = 'https://upwell.run';
 export const docsUrl = 'https://docs.upwell.run';
 
-/**
- * Which half of the site this deployment serves (one codebase, two Vercel projects):
- * - `site`: the landing page on upwell.run; /docs/* redirects to docs.upwell.run
- * - `docs`: the docs on docs.upwell.run, at the root (docs.upwell.run/quick-start)
- * - unset: both, with the docs under /docs (local development)
- */
-export const siteMode = (process.env.NEXT_PUBLIC_UPWELL_SITE ?? 'all') as 'site' | 'docs' | 'all';
-
-/** Where docs pages live in this deployment's URLs. Internally they are always under /docs. */
-export const docsRoute = siteMode === 'docs' ? '/' : '/docs';
+/** Docs pages are served at the root (docs.upwell.run/quick-start). Internally they live under /docs. */
+export const docsRoute = '/';
 export const docsImageRoute = '/og/docs';
 export const docsContentRoute = '/llms.mdx/docs';
 
-/**
- * Turns a docs path written as `/docs/…` (how content links are authored) into the right URL for
- * this deployment: `/…` on docs.upwell.run, `https://docs.upwell.run/…` on upwell.run.
- */
+/** Turns a docs path written as `/docs/…` (how content links are authored) into its URL: `/…`. */
 export function docsHref(href: string): string {
   if (href !== '/docs' && !href.startsWith('/docs/') && !href.startsWith('/docs#')) return href;
   const rest = href.slice('/docs'.length);
-  if (siteMode === 'docs') return rest.startsWith('#') ? `/${rest}` : rest || '/';
-  if (siteMode === 'site') return `${docsUrl}${rest}`;
-  return href;
+  return rest.startsWith('#') ? `/${rest}` : rest || '/';
 }
 
 export const gitConfig = {

@@ -8,14 +8,16 @@ Schemas, and an example app.
 
 Upwell is growing into a library with tools around it (this repo) plus a hosted platform (a
 separate repo). **Plans live in [`docs/plans/`](docs/plans/README.md)**; read its README for the
-order and status before starting that work. `PLAN.md` is the original SDK plan (v1).
+order and status before starting that work; plans for the `platform` repo live in
+[`updateswell/platform/docs/plans`](https://github.com/updateswell/platform/tree/main/docs/plans).
+`PLAN.md` is the original SDK plan (v1).
 
 ## Repos
 
-| Repo                                              | What                                                                                                                    |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `updateswell/upwell` (this)                       | The library and what's tightly bound to it: SDK, `@upwell/core`, `@upwell/cli` (plan 05), docs site, example app        |
-| `updateswell/platform` (plan 03, not created yet) | The hosted product: landing page (`upwell.run`), Cloudflare API (`api.`/`cdn.upwell.run`), dashboard (`app.upwell.run`) |
+| Repo                                           | What                                                                                                                    |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `updateswell/upwell` (this)                    | The library and what's tightly bound to it: SDK, `@upwell/core`, `@upwell/cli` (plan 05), docs site, example app        |
+| `updateswell/platform` (`~/projects/platform`) | The hosted product: landing page (`upwell.run`), Cloudflare API (`api.`/`cdn.upwell.run`), dashboard (`app.upwell.run`) |
 
 Rule of thumb: someone adopting the library should only see the library and its tools here.
 Anything that is the hosted product goes to `platform`, which depends on this repo only through
@@ -29,7 +31,7 @@ and lockfiles (they need different React versions) and read workspace files by r
 ```
 packages/core/                pure TS, published as `@upwell/core`: no dependencies, runs in RN, Node and Workers
   src/                        types, validate, decide/explain, versions, rollout (imports nothing outside src/; a test enforces it)
-  schemas/                    policy and releases JSON Schemas (also served at upwell.run/schemas/*)
+  schemas/                    policy and releases JSON Schemas (served at docs.upwell.run/schemas/*; upwell.run forwards)
 packages/upwell/              the SDK, published as `upwell`; depends on @upwell/core and re-exports it
   src/controller.ts           UpwellController: checks, caching, OTA/store actions, simulation
   src/react/                  UpwellProvider, useAppUpdate
@@ -44,7 +46,7 @@ packages/upwell/              the SDK, published as `upwell`; depends on @upwell
   schemas/                    copied from packages/core/schemas by the build (gitignored)
 example/                      Expo app using the packages' sources (Metro maps `upwell/*` and `@upwell/core` to them)
 docs/                         recipes, example policy files, and plans/
-apps/docs/                    docs + landing site (Fumadocs; own install; landing → platform in plan 03)
+apps/docs/                    docs site, docs.upwell.run (Fumadocs; own install)
 ```
 
 ## Commands
@@ -67,7 +69,7 @@ example's Metro map), so core edits show up without building. Only `upwell`'s bu
 ### Docs site
 
 `apps/docs` is outside the workspace: `cd apps/docs && npm install && npm run dev`. It deploys to
-Vercel from `main` (two projects, Root Directory `apps/docs`); CI builds it when `apps/docs/**`,
+Vercel from `main` (project `upwell-docs`, Root Directory `apps/docs`); CI builds it when `apps/docs/**`,
 the schemas or the SDK changelog change.
 
 ### Android locally
@@ -119,7 +121,8 @@ the schemas or the SDK changelog change.
   "Apple compliant".
 - Self-hosting must keep working: any URL or custom source for the policy, no required account.
 - Design: monochrome (black, white, greys) and Geist Mono. Brand source of truth:
-  `assets/brand/README.md` (moving to `BRAND.md` in `platform` in plan 03).
+  [`BRAND.md`](https://github.com/updateswell/platform/blob/main/BRAND.md) in `platform`; logos and
+  banners are served from `https://upwell.run/brand/*`.
 - The policy and releases documents are public (apps download them); never put secrets in them.
 
 ## Known follow-ups

@@ -2,7 +2,7 @@ import { RootProvider } from 'fumadocs-ui/provider/next';
 import type { Metadata } from 'next';
 import './global.css';
 import { Geist_Mono } from 'next/font/google';
-import { appDescription, appName, docsUrl, siteMode, siteUrl } from '@/lib/shared';
+import { appDescription, appName, docsUrl } from '@/lib/shared';
 
 const geistMono = Geist_Mono({
   subsets: ['latin'],
@@ -10,10 +10,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.SITE_URL ??
-      (siteMode === 'docs' ? docsUrl : siteMode === 'site' ? siteUrl : 'http://localhost:3000'),
-  ),
+  metadataBase: new URL(process.env.SITE_URL ?? docsUrl),
   title: {
     template: `%s | ${appName}`,
     default: `${appName}: update orchestrator for React Native and Expo`,
