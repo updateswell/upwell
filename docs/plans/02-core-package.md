@@ -69,15 +69,30 @@ The code moves; it isn't added. `src/core` is about 29 KB of runtime JavaScript 
 ## Session 2 · Publish
 
 - [x] Changesets: the `fixed` group and a minor changeset for both packages.
-- [ ] npm trusted publishing is configured per package, and the package must exist first. The
+- [x] npm trusted publishing is configured per package, and the package must exist first. The
       user publishes `@upwell/core` once by hand from `packages/core`
       (`npm publish --access public`), then adds the trusted publisher on npmjs.com: repo
       `updateswell/upwell`, workflow `release.yml`, environment `upwell-gh-ci`.
-- [ ] Merge the release PR; check both packages publish with provenance.
-- [ ] Scratch directory: `npm i @upwell/core` installs exactly one package (`npm ls --all`);
+- [x] Merge the release PR; check both packages publish with provenance.
+- [x] Scratch directory: `npm i @upwell/core` installs exactly one package (`npm ls --all`);
       `npm i upwell` installs `upwell` + `@upwell/core` and nothing else new.
 - [x] Docs: a short `@upwell/core` reference page (what it is, that `upwell` re-exports it, when to
       use it directly: servers, scripts, tests).
+
+## Outcome
+
+Done 2026-10-22. PR #7 (merged with a merge commit) did session 1 and the repo side of session
+2; `@upwell/core@0.1.4` was published by hand to create the package; `upwell@0.2.0` and
+`@upwell/core@0.2.0` were released from the version PR (#8) with provenance. Notes for later
+plans:
+
+- The first release attempt failed in the pack job (nothing published): `changeset pack` packs
+  in parallel, and core's `prepack` emptied `dist` while `upwell`'s build read it. Fixed in #9
+  (core builds on `prepublishOnly`). Any package whose build reads another package's output must
+  not have a sibling rebuilding that output on `prepack`; check with `npx changeset pack
+--out-dir <tmp>` when there are unreleased versions.
+- PRs opened by the release workflow don't trigger CI (GitHub token); only Vercel checks show.
+- `gh pr merge` is blocked for the agent in auto mode; the user runs it (`! gh pr merge …`).
 
 ## Definition of done
 
