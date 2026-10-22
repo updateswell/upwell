@@ -1,5 +1,12 @@
 # upwell
 
+## 0.2.1
+
+### Patch Changes
+
+- c1d56d3: The README banners load from upwell.run/brand instead of the GitHub repository.
+- @upwell/core@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes
