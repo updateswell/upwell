@@ -17,7 +17,7 @@ order and status before starting that work; plans for the `platform` repo live i
 | Repo                                           | What                                                                                                                    |
 | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `updateswell/upwell` (this)                    | The library and what's tightly bound to it: SDK, `@upwell/core`, `@upwell/cli` (plan 05), docs site, example app        |
-| `updateswell/platform` (`~/projects/platform`) | The hosted product: landing page (`upwell.run`), Cloudflare API (`api.`/`cdn.upwell.run`), dashboard (`app.upwell.run`) |
+| `updateswell/platform` (`~/projects/native/platform`) | The hosted product: landing page (`upwell.run`), Cloudflare API (`api.`/`cdn.upwell.run`), dashboard (`app.upwell.run`) |
 
 Rule of thumb: someone adopting the library should only see the library and its tools here.
 Anything that is the hosted product goes to `platform`, which depends on this repo only through

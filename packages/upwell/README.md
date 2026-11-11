@@ -1,11 +1,11 @@
 <a href="https://upwell.run">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://upwell.run/brand/banner-dark.png">
-    <img src="https://upwell.run/brand/banner-light.png" alt="Upwell: updates that rise up on their own. Update orchestrator for React Native and Expo.">
+    <img src="https://upwell.run/brand/banner-light.png" alt="Upwell: no user left on an old build. Update orchestrator for React Native and Expo.">
   </picture>
 </a>
 
-**Updates that rise up on their own.** One library that decides, on every launch and foreground,
+**No user left on an old build.** One library that decides, on every launch and foreground,
 what kind of update a React Native / Expo user needs, and drives it end to end:
 
 | Situation | What Upwell does |

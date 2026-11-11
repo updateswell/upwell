@@ -2,46 +2,59 @@
 @import 'fumadocs-ui/css/black.css';
 @import 'fumadocs-ui/css/preset.css';
 
-/* Upwell design system: monochrome. Source of truth: https://github.com/updateswell/platform/blob/main/BRAND.md */
+/* Upwell design system: monochrome, toned down (warm off-white and off-black). Source of truth: https://github.com/updateswell/platform/blob/main/BRAND.md */
 @theme {
-  --color-fd-background: #fafafa;
-  --color-fd-foreground: #0a0a0a;
-  --color-fd-muted: #f5f5f5;
-  --color-fd-muted-foreground: #737373;
-  --color-fd-popover: #ffffff;
-  --color-fd-popover-foreground: #0a0a0a;
-  --color-fd-card: #ffffff;
-  --color-fd-card-foreground: #0a0a0a;
-  --color-fd-border: #e5e5e5;
-  --color-fd-primary: #0a0a0a;
-  --color-fd-primary-foreground: #fafafa;
-  --color-fd-secondary: #f5f5f5;
-  --color-fd-secondary-foreground: #0a0a0a;
-  --color-fd-accent: #f2f2f2;
-  --color-fd-accent-foreground: #0a0a0a;
-  --color-fd-ring: #a3a3a3;
+  --color-fd-background: #f7f5f2;
+  --color-fd-foreground: #1d1b19;
+  --color-fd-muted: #efedea;
+  --color-fd-muted-foreground: #736f69;
+  --color-fd-popover: #fcfbf9;
+  --color-fd-popover-foreground: #1d1b19;
+  --color-fd-card: #fcfbf9;
+  --color-fd-card-foreground: #1d1b19;
+  --color-fd-border: #e2dfda;
+  --color-fd-primary: #1d1b19;
+  --color-fd-primary-foreground: #f7f5f2;
+  --color-fd-secondary: #efedea;
+  --color-fd-secondary-foreground: #1d1b19;
+  --color-fd-accent: #edeae6;
+  --color-fd-accent-foreground: #1d1b19;
+  --color-fd-ring: #a8a49e;
+
+  /* Warm-tinted neutral scale, so hard-coded neutral-* utilities match the tokens. */
+  --color-neutral-50: #fbfaf8;
+  --color-neutral-100: #f6f4f1;
+  --color-neutral-200: #e7e4df;
+  --color-neutral-300: #d7d3cd;
+  --color-neutral-400: #a5a19a;
+  --color-neutral-500: #77736c;
+  --color-neutral-600: #55524d;
+  --color-neutral-700: #423f3b;
+  --color-neutral-800: #282623;
+  --color-neutral-900: #191816;
+  --color-neutral-950: #0f0e0c;
 
   --font-sans: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .dark {
-  --color-fd-background: #0a0a0a;
-  --color-fd-foreground: #fafafa;
-  --color-fd-muted: #141414;
-  --color-fd-muted-foreground: #a3a3a3;
-  --color-fd-popover: #111111;
-  --color-fd-popover-foreground: #fafafa;
-  --color-fd-card: #111111;
-  --color-fd-card-foreground: #fafafa;
-  --color-fd-border: #262626;
-  --color-fd-primary: #fafafa;
-  --color-fd-primary-foreground: #0a0a0a;
-  --color-fd-secondary: #171717;
-  --color-fd-secondary-foreground: #fafafa;
-  --color-fd-accent: #1a1a1a;
-  --color-fd-accent-foreground: #fafafa;
-  --color-fd-ring: #525252;
+  --color-fd-background: #151412;
+  --color-fd-foreground: #efedea;
+  --color-fd-muted: #1f1e1b;
+  --color-fd-muted-foreground: #a49f98;
+  --color-fd-popover: #1b1a18;
+  --color-fd-popover-foreground: #efedea;
+  --color-fd-card: #1b1a18;
+  --color-fd-card-foreground: #efedea;
+  --color-fd-border: #302d2a;
+  --color-fd-primary: #efedea;
+  --color-fd-primary-foreground: #151412;
+  --color-fd-secondary: #22201e;
+  --color-fd-secondary-foreground: #efedea;
+  --color-fd-accent: #262421;
+  --color-fd-accent-foreground: #efedea;
+  --color-fd-ring: #585550;
 }
 
 html {

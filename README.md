@@ -1,11 +1,11 @@
 <a href="https://upwell.run">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://upwell.run/brand/banner-dark.png">
-    <img src="https://upwell.run/brand/banner-light.png" alt="Upwell: updates that rise up on their own. Update orchestrator for React Native and Expo.">
+    <img src="https://upwell.run/brand/banner-light.png" alt="Upwell: no user left on an old build. Update orchestrator for React Native and Expo.">
   </picture>
 </a>
 
-**Updates that rise up on their own.** Upwell decides, on every launch and foreground, what kind
+**No user left on an old build.** Upwell decides, on every launch and foreground, what kind
 of update a React Native / Expo user needs (OTA, flexible or required store update, stranded
 runtime) and drives it end to end, from a remote policy.
 
