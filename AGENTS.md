@@ -6,18 +6,19 @@ drives it end to end, from a remote `policy.json`. This repo is the npm package 
 JavaScript SDK, the Android (Kotlin) and iOS (Swift) Expo module, the config plugin, the JSON
 Schemas, and an example app.
 
-Upwell is growing into a library with tools around it (this repo) plus a hosted platform (a
-separate repo). **Plans live in [`docs/plans/`](docs/plans/README.md)**; read its README for the
+Upwell is a library with tools around it (this repo). There is no hosted backend (plan B,
+2026-11-12): the CLI publishes the policy to GitHub; the separate `platform` repo only holds the
+landing page. **Plans live in [`docs/plans/`](docs/plans/README.md)**; read its README for the
 order and status before starting that work; plans for the `platform` repo live in
 [`updateswell/platform/docs/plans`](https://github.com/updateswell/platform/tree/main/docs/plans).
 `PLAN.md` is the original SDK plan (v1).
 
 ## Repos
 
-| Repo                                           | What                                                                                                                    |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `updateswell/upwell` (this)                    | The library and what's tightly bound to it: SDK, `@upwell/core`, `@upwell/cli` (plan 05), docs site, example app        |
-| `updateswell/platform` (`~/projects/native/platform`) | The hosted product: landing page (`upwell.run`), Cloudflare API (`api.`/`cdn.upwell.run`), dashboard (`app.upwell.run`) |
+| Repo                                                  | What                                                                                                             |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `updateswell/upwell` (this)                           | The library and what's tightly bound to it: SDK, `@upwell/core`, `@upwell/cli` (plan 05), docs site, example app |
+| `updateswell/platform` (`~/projects/native/platform`) | The landing page (`upwell.run`); API and dashboard plans are parked                                              |
 
 Rule of thumb: someone adopting the library should only see the library and its tools here.
 Anything that is the hosted product goes to `platform`, which depends on this repo only through
@@ -120,7 +121,7 @@ the schemas or the SDK changelog change.
 - Never build App Review detection or behave differently for reviewers. Never market Upwell as
   "Apple compliant".
 - Self-hosting must keep working: any URL or custom source for the policy, no required account.
-- Design: monochrome (black, white, greys) and Geist Mono. Brand source of truth:
+- Design: monochrome (toned-down black, white and warm greys) and Geist Mono. Brand source of truth:
   [`BRAND.md`](https://github.com/updateswell/platform/blob/main/BRAND.md) in `platform`; logos and
   banners are served from `https://upwell.run/brand/*`.
 - The policy and releases documents are public (apps download them); never put secrets in them.

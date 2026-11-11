@@ -10,17 +10,22 @@ driven by two JSON documents:
   modes, rollout, messages.
 - **`releases.json`**: one entry per OTA release, for "What's new" and the "Updated" sheet.
 
-Three layers, each optional on top of the one before:
+Two layers, the second optional:
 
-1. **The library** (`upwell`): makes the decisions inside the app. Works with a policy hosted
-   anywhere, or none.
+1. **The library** (`upwell`): makes the decisions inside the app. Works with no policy (store and
+   OTA information only), or a policy at any URL.
 2. **The CLI** (`@upwell/cli`): how developers, CI and AI agents set up, check and change what the
-   library decides: validate, explain, edit, release automation, `doctor`. Most commands work on
-   local files with no account.
-3. **The platform**: optional hosting on Cloudflare's edge (`upwell push` and the files are live),
-   analytics, and later a dashboard.
+   library decides: validate, explain, edit, release automation, `doctor`, and `publish`, which
+   puts the documents at a free public URL (a GitHub gist or public repo). No account of ours.
 
-Self-hosting is first-class forever: any URL or custom source for the policy, no account needed.
+There is no hosted backend (plan B, decided 2026-11-12). A SaaS that only hosts a small JSON file
+isn't worth running or paying for, and a full OTA hosting service would compete with EAS Update and
+hot-updater on the commodity part. Upwell's value is deciding which update each user needs, so it
+stays a library that works with whatever OTA tool and hosting a team already has. The `platform`
+repo keeps the landing page; plans 04, 07, 08 and 09 are parked. If analytics ever come back, they
+build on the SDK's event stream (plan 06).
+
+Self-hosting is the only mode: any URL or custom source for the policy, no account needed.
 
 ## Repositories
 
@@ -65,23 +70,18 @@ installed with the library; people run `npx @upwell/cli …` or add it as a dev 
 ## System overview
 
 ```
-           developer / CI / AI agent
-                     │  @upwell/cli (local files, or secret key for the platform)
-                     ▼
- ┌────────────── api.upwell.run (Worker) ───────────────┐
- │ projects · keys · document versions · rollback        │
- │ validation with @upwell/core · guardrails · stats     │
- └──────┬──────────────────────────┬─────────────────────┘
-        │ D1 (source of truth)     │ KV (published copies)
-        │                          ▼
-        │           cdn.upwell.run (Worker, edge)
-        │             GET /v1/{project}/{env}/policy.json
-        │                          │
-        │                          ▼
-        │                app with the upwell SDK ◄── or any self-hosted URL
-        │                          │ POST events (public key, opt-in)
-        ▼                          ▼
-    audit log         Workers Analytics Engine ──► stats
+   developer / CI / AI agent
+             │  @upwell/cli: edit, validate, explain upwell/policy.json + releases.json
+             │  (committed in the app repo, reviewed in PRs)
+             ▼
+   upwell publish ──► public gist or repo on GitHub ──► raw URL (CDN, max-age 300)
+                                                            │
+             any other URL or custom PolicySource ──────────┤ (optional: no policy at all)
+                                                            ▼
+                                             app with the upwell SDK
+                                     ├─ Play / App Store: newer version?
+                                     ├─ OTA adapter (expo-updates, …)
+                                     └─ onEvent ──► the team's own analytics
 ```
 
 ## Contracts between the repos
@@ -89,27 +89,22 @@ installed with the library; people run `npx @upwell/cli …` or add it as a dev 
 - **JSON Schemas** (`packages/core/schemas/`): served at `https://upwell.run/schemas/*` (the
   landing forwards to the docs site's copy) for `$schema` in users' files.
 - **`@upwell/core`**: `validatePolicy`, `validateReleases`, `decide`, `explain`, event types. The
-  API validates every write with it, the CLI validates and explains with it, the SDK depends on
-  it. A policy the server accepts is a policy the SDK accepts.
-- **OpenAPI** (`https://api.upwell.run/openapi.json`): the API contract. The CLI's client is
-  generated from it; agents can read it.
+  CLI validates and explains with it, the SDK depends on it. A policy the CLI accepts is a policy
+  the SDK accepts.
 
 Changing the document format: change `@upwell/core` and the schemas in `upwell`, release, then
-bump `@upwell/core` in `platform`. Keep changes additive (new optional fields) so older SDKs and
-the API keep working; `schemaVersion` only changes for breaking changes.
+bump `@upwell/core` in `platform`. Keep changes additive (new optional fields) so older SDKs keep
+working; `schemaVersion` only changes for breaking changes.
 
 ## Domains
 
 All on `upwell.run` (DNS on Cloudflare; the local wrangler token only has `zone:read`, so DNS and
 custom-domain changes are manual in the Cloudflare dashboard unless it gets more permissions).
 
-| Host              | Serves                                   | Repo, app                    | Plan |
-| ----------------- | ---------------------------------------- | ---------------------------- | ---- |
-| `upwell.run`      | Landing, `/brand/*`, `/schemas/*`        | `platform`, `apps/landing`   | 03   |
-| `docs.upwell.run` | Docs, `llms.txt`, schemas                | `upwell`, `apps/docs`        | 01   |
-| `api.upwell.run`  | Management API, ingest, `openapi.json`   | `platform`, `apps/api`       | 04   |
-| `cdn.upwell.run`  | Public, cached policy and releases reads | `platform`, `apps/api`       | 04   |
-| `app.upwell.run`  | Dashboard                                | `platform`, `apps/dashboard` | 09   |
+| Host              | Serves                            | Repo, app                  | Plan |
+| ----------------- | --------------------------------- | -------------------------- | ---- |
+| `upwell.run`      | Landing, `/brand/*`, `/schemas/*` | `platform`, `apps/landing` | 03   |
+| `docs.upwell.run` | Docs, `llms.txt`, schemas         | `upwell`, `apps/docs`      | 01   |
 
 ## Local layout
 
@@ -120,26 +115,25 @@ directory when moving.
 
 ## Decisions
 
-| Decision                                                                                | Status             | Why                                                                                                                                                         |
-| --------------------------------------------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Two repos: `upwell` (library, core, CLI, docs) and `platform` (landing, API, dashboard) | Decided 2026-10-22 | Adopters see only the library; SaaS stays separate; the core contract and the tools that depend on it change together in one repo                           |
-| Both repos public                                                                       | Decided            | Visibility doesn't matter; clutter does                                                                                                                     |
-| Hosted platform first, self-hosting stays supported                                     | Decided            | Removes hosting friction; no users yet, so the platform can be shaped now                                                                                   |
-| API and CLI before the dashboard                                                        | Decided            | CLI and agents need the API anyway; the dashboard is a thin layer later                                                                                     |
-| `@upwell/core` as its own package                                                       | Decided            | The API and CLI need validation and `explain()` without React Native; `upwell`'s required peers (`expo`, `react`, `react-native`) are auto-installed by npm |
-| CLI is a separate package, not bundled in `upwell`                                      | Decided            | Optional tool; keeps the library's install minimal                                                                                                          |
-| Cloudflare (Workers, D1, KV, Analytics Engine) for the API                              | Decided            | Edge reads, cheap at low volume; domain already on Cloudflare                                                                                               |
-| npm workspaces in `upwell`                                                              | Decided 2026-10-22 | Already on npm; pnpm's isolated installs need extra setup with React Native                                                                                 |
-| pnpm workspaces in `platform`                                                           | Decided 2026-10-22 | No React Native there; fast and strict                                                                                                                      |
-| MIT license for `platform`, like the SDK                                                | Decided 2026-10-22 | Simplest; both repos public, nothing to protect yet                                                                                                         |
-| API keys before accounts                                                                | (proposed)         | Unblocks the CLI, CI and early users                                                                                                                        |
-| Hono + Vitest (Workers pool) for the API                                                | (proposed)         | Standard on Workers                                                                                                                                         |
+| Decision                                                                                        | Status                | Why                                                                                                                                                         |
+| ----------------------------------------------------------------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Two repos: `upwell` (library, core, CLI, docs) and `platform` (landing, API, dashboard)         | Decided 2026-10-22    | Adopters see only the library; SaaS stays separate; the core contract and the tools that depend on it change together in one repo                           |
+| Both repos public                                                                               | Decided               | Visibility doesn't matter; clutter does                                                                                                                     |
+| Hosted platform first, self-hosting stays supported                                             | Superseded 2026-11-12 | Removes hosting friction; no users yet, so the platform can be shaped now                                                                                   |
+| No hosted backend (plan B): library + CLI, `upwell publish` to GitHub; plans 04/07/08/09 parked | Decided 2026-11-12    | Hosting a small JSON file isn't worth a SaaS; OTA hosting is a crowded commodity; the decision engine is the product                                        |
+| Zero-policy mode first                                                                          | Decided 2026-11-12    | First value without writing or hosting anything; the engine already supports it                                                                             |
+| No remote-config adapters (Firebase Remote Config, …) in v1                                     | Decided 2026-11-12    | Keep v1 small; revisit after `publish` ships                                                                                                                |
+| API and CLI before the dashboard                                                                | Parked with plan 04   | CLI and agents need the API anyway; the dashboard is a thin layer later                                                                                     |
+| `@upwell/core` as its own package                                                               | Decided               | The API and CLI need validation and `explain()` without React Native; `upwell`'s required peers (`expo`, `react`, `react-native`) are auto-installed by npm |
+| CLI is a separate package, not bundled in `upwell`                                              | Decided               | Optional tool; keeps the library's install minimal                                                                                                          |
+| Cloudflare (Workers, D1, KV, Analytics Engine) for the API                                      | Parked with plan 04   | Edge reads, cheap at low volume; domain already on Cloudflare                                                                                               |
+| npm workspaces in `upwell`                                                                      | Decided 2026-10-22    | Already on npm; pnpm's isolated installs need extra setup with React Native                                                                                 |
+| pnpm workspaces in `platform`                                                                   | Decided 2026-10-22    | No React Native there; fast and strict                                                                                                                      |
+| MIT license for `platform`, like the SDK                                                        | Decided 2026-10-22    | Simplest; both repos public, nothing to protect yet                                                                                                         |
+| API keys before accounts                                                                        | Parked with plan 04   | Unblocks the CLI, CI and early users                                                                                                                        |
+| Hono + Vitest (Workers pool) for the API                                                        | Parked with plan 04   | Standard on Workers                                                                                                                                         |
 
 ## Open questions
 
-- Pricing and limits (free tier, when to charge). Not needed before plan 07, but the API counts
-  usage per project from day one.
-- Terms of service, privacy policy and a data processing description: needed before analytics
-  from other people's apps (07) and before sign-up (08).
 - The smoke-test app (`~/projects/upwell-smoke`, not in git): keep it local, or make it a second
   example in `upwell` later.
