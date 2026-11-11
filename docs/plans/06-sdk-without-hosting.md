@@ -64,16 +64,16 @@ No device identifiers, no user ids, nothing personal.
 
 ## Session 1 · Zero-policy mode
 
-- [ ] Tests first (controller): no `policy` option → no fetch, no cache read, `policyError` null,
+- [x] Tests first (controller): no `policy` option → no fetch, no cache read, `policyError` null,
       trace says `policy: none`; Play update available → flexible recommended; Play priority 5 →
       recommended immediately (not required); App Store lookup newer → recommended with the
       sheet; nothing known → `upToDate`; OTA still downloads and applies.
-- [ ] `policy?:` in `UpwellOptions` and the provider props; controller and provider changes.
-- [ ] Example app: a "No policy" preset in the dev menu or a config switch.
-- [ ] Docs: installation and quick start lead with the no-policy setup, then "Add a policy" for
+- [x] `policy?:` in `UpwellOptions` and the provider props; controller and provider changes.
+- [x] Example app: a "No policy" preset in the dev menu or a config switch.
+- [x] Docs: installation and quick start lead with the no-policy setup, then "Add a policy" for
       forced updates and stranded detection (a table of what each setup can do); the policy
       overview page says the policy is optional.
-- [ ] Changeset (minor).
+- [x] Changeset (minor).
 
 ## Session 2 · Event stream
 

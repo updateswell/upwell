@@ -38,8 +38,12 @@ import {
 import { type PolicySource, type ReleasesSource, type Source, toSource } from './sources';
 
 export interface UpwellOptions {
-  /** Policy URL or source. */
-  policy: PolicySource | string;
+  /**
+   * Policy URL or source. Optional: without one, Upwell still applies OTA updates and recommends
+   * store updates that Google Play or the App Store report, but can't force updates (`minimum`)
+   * or detect stranded installs.
+   */
+  policy?: PolicySource | string;
   /** Optional `releases.json` URL or source, for "What's new". */
   releases?: ReleasesSource | string;
   /** OTA tool adapter, e.g. `expoUpdatesAdapter()` from `upwell/expo-updates`. */
@@ -148,7 +152,7 @@ export class UpwellController {
   private readonly realPlatform: UpwellPlatform;
   private platform: UpwellPlatform;
   private ota: OtaAdapter | undefined;
-  private policySource: PolicySource;
+  private policySource: PolicySource | undefined;
   private releasesSource: ReleasesSource | undefined;
   private simulationSetup: SimulationSetup | null = null;
 
@@ -176,7 +180,7 @@ export class UpwellController {
         : (options.platform ?? unavailablePlatform());
     this.platform = this.realPlatform;
     this.ota = options.ota;
-    this.policySource = toSource(options.policy);
+    this.policySource = options.policy ? toSource(options.policy) : undefined;
     this.releasesSource = options.releases ? toSource(options.releases) : undefined;
     this.state = {
       status: 'idle',
@@ -281,7 +285,9 @@ export class UpwellController {
     const [policyResult, releasesResult] = await Promise.all([
       sim
         ? Promise.resolve({ value: sim.policy, error: sim.policyError, warnings: [] as string[] })
-        : this.fetchValidated(this.policySource, validatePolicy, KEYS.policy),
+        : this.policySource
+          ? this.fetchValidated(this.policySource, validatePolicy, KEYS.policy)
+          : Promise.resolve({ value: null, error: null, warnings: [] as string[] }),
       sim
         ? Promise.resolve({ value: sim.releases, error: null, warnings: [] as string[] })
         : this.releasesSource

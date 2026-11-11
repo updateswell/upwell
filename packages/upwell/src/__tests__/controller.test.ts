@@ -166,6 +166,83 @@ describe('UpwellController', () => {
     expect(fetches).toBe(2);
   });
 
+  describe('without a policy', () => {
+    function noPolicy(over: Partial<UpwellOptions> = {}) {
+      return new UpwellController({ platform: platform(), ...over });
+    }
+
+    it('recommends the Play update with no fetch and no policy error', async () => {
+      const c = noPolicy();
+      const d = await c.check();
+      expect(d).toMatchObject({ kind: 'store.recommended', flow: 'playFlexible' });
+      expect(c.getState()).toMatchObject({ policy: null, policyError: null, policyWarnings: [] });
+      expect(c.getState().trace).toContain('policy: none');
+    });
+
+    it('keeps Play priority 5 a recommendation, never a required update', async () => {
+      const c = noPolicy({ platform: platform({ store: playStore({ updatePriority: 5 }) }) });
+      expect((await c.check()).kind).toBe('store.recommended');
+    });
+
+    it('recommends a newer App Store version with the sheet', async () => {
+      const ios = new SimulatedPlatform(
+        'ios',
+        {
+          installed: installed({ platform: 'ios', installSource: 'appStore', osVersion: '18.0' }),
+          store: {
+            kind: 'appStore',
+            version: '3.4.0',
+            releaseDate: new Date(Date.now() - 5 * 86_400_000).toISOString(),
+            minimumOsVersion: '16.0',
+            trackId: 1234567890,
+            trackViewUrl: 'https://apps.apple.com/app/id1234567890',
+          },
+        },
+        1,
+        true
+      );
+      const d = await noPolicy({ platform: ios }).check();
+      expect(d).toMatchObject({
+        kind: 'store.recommended',
+        flow: 'appStoreSheet',
+        storeUrl: 'https://apps.apple.com/app/id1234567890',
+      });
+    });
+
+    it('is up to date when no store knows a newer version', async () => {
+      const c = noPolicy({
+        platform: platform({ installed: { installSource: 'sideload' }, store: null }),
+      });
+      expect((await c.check()).kind).toBe('upToDate');
+    });
+
+    it('ignores a policy cached by an earlier setup', async () => {
+      const p = platform({
+        installed: { nativeVersion: '2.9.0', buildNumber: '290' },
+        store: null,
+      });
+      const withPolicy = new UpwellController({
+        policy: staticSource(policyFixture()),
+        platform: p,
+      });
+      expect((await withPolicy.check()).kind).toBe('store.required');
+      const c = noPolicy({ platform: p });
+      await c.check();
+      expect(c.getState().policy).toBeNull();
+      expect(c.getState().decision.kind).not.toBe('store.required');
+    });
+
+    it('still downloads OTA updates', async () => {
+      const c = noPolicy({
+        platform: platform({ store: null }),
+        ota: new FakeOta(true),
+      });
+      await c.check();
+      await waitFor(() => c.getState().ota.status === 'ready');
+      expect(c.getState().decision.kind).toBe('ota.ready');
+    });
+  });
+
   it('errors clearly without the native module', async () => {
     const c = new UpwellController({ policy: staticSource(policyFixture()), platform: null });
     const d = await c.check();

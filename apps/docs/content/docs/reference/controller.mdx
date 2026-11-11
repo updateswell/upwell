@@ -22,8 +22,8 @@ const upwell = createUpwell({ policy: 'https://cdn.example.com/upwell/policy.jso
   type={{
     policy: {
       type: 'PolicySource | string',
-      required: true,
-      description: 'Policy URL, or a source.',
+      description:
+        'Policy URL, or a source. Optional: without one, Upwell still applies OTA updates and recommends store updates that Google Play or the App Store report, but can\'t force updates or detect stranded installs.',
       typeDescriptionLink: '/docs/guides/custom-sources-and-adapters#policy-sources',
     },
     releases: {
@@ -110,7 +110,7 @@ const upwell = createUpwell({ policy: 'https://cdn.example.com/upwell/policy.jso
     dismissed: { type: 'boolean', description: 'The user dismissed the current decision this session.' },
     busy: { type: 'boolean', description: 'A store flow or an OTA restart is in progress.' },
     installed: { type: 'InstalledInfo | null', description: 'What the device reported.' },
-    policy: { type: 'Policy | null', description: 'The policy in use (fresh, or last known good).' },
+    policy: { type: 'Policy | null', description: 'The policy in use (fresh, or last known good). `null` when none is configured.' },
     policyError: { type: 'string | null', description: 'Why the latest fetch failed or was rejected.' },
     policyWarnings: { type: 'string[]', description: 'Validator warnings, e.g. unknown keys.' },
     store: { type: 'StoreInfo | null', description: 'Play or App Store info.' },
