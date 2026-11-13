@@ -75,7 +75,8 @@ export async function policySetRef(
   const { platform } = options;
   const ref: VersionRef = {
     version: parseVersion(options.version),
-    build: parseBuild(options.build),
+    // iOS keeps CFBundleVersion as a string, like `init` and the examples; Android uses numbers.
+    build: platform === 'ios' ? String(parseBuild(options.build)) : parseBuild(options.build),
   };
   if (options.releasedAt) {
     ref.releasedAt = parseDate(options.releasedAt, ctx.io.now(), '--released-at');

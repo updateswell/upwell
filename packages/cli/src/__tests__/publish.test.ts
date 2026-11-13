@@ -463,3 +463,109 @@ describe('status', () => {
     expect(r.json.data.files.map((f: any) => f.state)).toEqual(['in-sync', 'in-sync']);
   });
 });
+
+/** The command sequences from the "Automate your policy" guide, run as written. */
+describe('documented recipes', () => {
+  const easUpdate = (runtime: string) => [
+    {
+      id: 'u-android',
+      group: 'grp-1',
+      platform: 'android',
+      runtimeVersion: runtime,
+      message: 'Fix checkout on iOS 27',
+      createdAt: '2026-11-13T10:00:00.000Z',
+    },
+    {
+      id: 'u-ios',
+      group: 'grp-1',
+      platform: 'ios',
+      runtimeVersion: runtime,
+      message: 'Fix checkout on iOS 27',
+      createdAt: '2026-11-13T10:00:00.000Z',
+    },
+  ];
+
+  beforeEach(async () => {
+    box.write('upwell/policy.json', {
+      ...POLICY,
+      android: { ...POLICY.android, ota: { latestRuntimeVersion: '3.4.0' } },
+    });
+    expect((await run(['publish', '--yes'])).code).toBe(0); // "publish once by hand first"
+  });
+
+  it('after an OTA update', async () => {
+    box.write('eas-update.json', easUpdate('3.4.0'));
+    const add = await run([
+      'releases',
+      'add',
+      '--from-eas-update',
+      'eas-update.json',
+      '--kind',
+      'fix',
+      '--yes',
+    ]);
+    expect(add.code).toBe(0);
+    expect((await run(['publish', '--yes'])).code).toBe(0);
+    expect(gh.gists.get('g0001')!.files['releases.json']).toContain(
+      '"notes": "Fix checkout on iOS 27"'
+    );
+  });
+
+  it('a new OTA runtime needs --confirm, at both steps', async () => {
+    expect((await run(['policy', 'set', 'ota-runtime', '3.5.0', '--yes'])).code).toBe(3);
+    expect((await run(['policy', 'set', 'ota-runtime', '3.5.0', '--confirm'])).code).toBe(0);
+    expect((await run(['publish', '--yes'])).code).toBe(3);
+    expect((await run(['publish', '--confirm'])).code).toBe(0);
+  });
+
+  it('after a store release', async () => {
+    const steps = [
+      [
+        'policy',
+        'set',
+        'latest',
+        '--platform',
+        'android',
+        '--version',
+        '3.5.0',
+        '--build',
+        '350',
+        '--released-at',
+        'today',
+        '--yes',
+      ],
+      [
+        'policy',
+        'set',
+        'latest',
+        '--platform',
+        'ios',
+        '--version',
+        '3.5.0',
+        '--build',
+        '1',
+        '--released-at',
+        'today',
+        '--yes',
+      ],
+      ['publish', '--yes'],
+    ];
+    for (const step of steps) expect((await run(step)).code).toBe(0);
+    expect(JSON.parse(gh.gists.get('g0001')!.files['policy.json']!).ios.latest).toEqual({
+      version: '3.5.0',
+      build: '1',
+      releasedAt: '2026-11-13',
+    });
+  });
+
+  it('the pull request check runs without a token', async () => {
+    const proc = gh.process({});
+    for (const step of [
+      ['policy', 'validate'],
+      ['releases', 'validate'],
+      ['publish', '--dry-run'],
+    ]) {
+      expect((await run(step, proc)).code).toBe(0);
+    }
+  });
+});

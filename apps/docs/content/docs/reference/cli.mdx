@@ -173,7 +173,7 @@ upwell policy set minimum --platform ios --version 3.2.0 --build 1
 | --- | --- |
 | `--platform` | `android` or `ios` (required) |
 | `--version` | Display version (required) |
-| `--build` | Build number: versionCode on Android, CFBundleVersion on iOS (required) |
+| `--build` | Build number: versionCode on Android (written as a number), CFBundleVersion on iOS (written as a string) (required) |
 | `--released-at` | ISO date it went live in the store, or `today`. Drives staleness on iOS. Setting the same version again keeps its date |
 
 Creates the policy file if there isn't one.
@@ -270,6 +270,9 @@ upwell schema policy > policy.schema.json
 Prints the JSON Schema for `policy` or `releases`.
 
 ## Scripts, CI and agents
+
+Recipes for EAS, GitHub Actions and coding agents (with an `AGENTS.md` snippet for your app repo)
+are in [Automate your policy](/docs/guides/automate-your-policy).
 
 Every command takes `--json`. stdout then holds exactly one JSON value:
 

@@ -225,7 +225,7 @@ Decided in session 2 (2026-11-13):
 - [x] `status`: URLs, local vs published, last published revision.
 - [x] Tests for both targets: an in-memory GitHub behind the injected `fetch` (no MSW needed, see
       below). Read-only real run against the GitHub API (`publish --repo updateswell/upwell
-    --path docs/examples --dry-run`): unchanged files come back "up to date", an edit shows the
+  --path docs/examples --dry-run`): unchanged files come back "up to date", an edit shows the
       right diff.
 - [ ] One real run against a throwaway gist. Not done in the session: it creates a public gist on
       the maintainer's account, so it waits for them.
@@ -252,15 +252,28 @@ Decided in session 3 (2026-11-13):
 
 ## Session 4 · Automation recipes and agents
 
-- [ ] Docs page "Automate your policy", with tested recipes:
+- [x] Docs page "Automate your policy" (`guides/automate-your-policy.mdx`), with tested recipes:
   - after `eas update`: `eas update --json … > out.json && npx upwell releases add --from-eas-update out.json && npx upwell publish --yes`
   - after a store release goes live: `npx upwell policy set latest …` then `publish` in the
     release job
   - GitHub Actions: publish on merge to `main` when `upwell/**` changed, with `GITHUB_TOKEN`
     (repo target) or a gist-scoped token
   - EAS Build hooks (`eas-build-on-success`) where they fit
-- [ ] Docs section for agents: the command list, the `--json` contract, error codes, and an
+- [x] Docs section for agents: the command list, the `--json` contract, error codes, and an
       `AGENTS.md` snippet app developers can paste into their own repos.
+
+Decided in session 4 (2026-11-13):
+
+- **"Tested" means the command sequences run in Jest** (`documented recipes` in
+  `publish.test.ts`) against the fake GitHub, exactly as the guide writes them. The workflow YAML
+  is parsed, not run: running it needs a repo with secrets.
+- **CI publishes with `--confirm`**: the merged pull request is the review. The guide offers `--yes`
+  for teams that want risky changes published by hand. A pull request check runs `validate` and
+  `publish --dry-run`, which shows the diff and risks without a token.
+- **EAS Build hooks don't fit**: a build isn't a release, so the guide says not to move `latest`
+  on build success.
+- **iOS builds are strings** in everything the CLI writes (`policy set` used to write `1`); Android
+  builds are numbers. Found by the recipe tests.
 
 ## Definition of done
 

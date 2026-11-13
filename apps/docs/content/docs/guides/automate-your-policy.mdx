@@ -1,0 +1,151 @@
+---
+title: Automate your policy
+description: Keep the policy and release notes in step with your releases from EAS, GitHub Actions, scripts and coding agents.
+icon: Repeat
+---
+
+The policy and release notes live in your repo (`upwell/policy.json`, `upwell/releases.json`) and
+change at the same few moments in every release. The [CLI](/docs/reference/cli) turns each of those
+moments into a command you can script. Every command takes `--json` and never prompts outside a
+terminal, so the same commands work in CI and for coding agents.
+
+Pin the CLI as a dev dependency so CI runs the version you tested:
+
+```bash
+npm install -D @upwell/cli
+npx upwell --version
+```
+
+## After an OTA update
+
+`eas update --json` prints the update group it created. Feed it to `releases add`, so users (and App
+Review) see what the update changed, then publish:
+
+```bash
+eas update --branch production --environment production --message "Fix checkout on iOS 27" \
+  --json > eas-update.json
+npx upwell releases add --from-eas-update eas-update.json --kind fix --yes
+npx upwell publish --yes
+```
+
+The id, platforms, runtime and date come from EAS, and the notes default to the update message.
+`--kind` is always yours to give (`fix`, `content` or `feature`): it's what the update is called in
+the app.
+
+The first OTA update for a **new runtime** also moves the policy's OTA runtime. That strands
+installs on the old runtime, so it needs `--confirm`:
+
+```bash
+npx upwell policy set ota-runtime 3.5.0 --confirm
+npx upwell publish --confirm
+```
+
+## After a store release
+
+Update `latest` once the build is **live** in the store (and rolled out, on Play), not when it's
+built or submitted:
+
+```bash
+npx upwell policy set latest --platform android --version 3.5.0 --build 350 --released-at today --yes
+npx upwell policy set latest --platform ios --version 3.5.0 --build 1 --released-at today --yes
+npx upwell publish --yes
+```
+
+Raising `minimum` stays a deliberate, separate step:
+[forced updates](/docs/guides/forced-updates) block everyone below it.
+
+<Callout type="warn" title="Not on build success">
+  EAS Build hooks (`eas-build-on-success`) run when a binary is built, long before it's in users'
+  hands. Pointing `latest` at it then would prompt users to update to a version they can't
+  download yet. Run the commands above from the job that knows the release is live, or by hand.
+</Callout>
+
+## Review in pull requests, publish on merge
+
+Edit the files with the CLI (or by hand) in a branch, let the pull request show what changes, and
+publish when it's merged.
+
+```yaml title=".github/workflows/upwell-check.yml"
+name: Upwell policy check
+on:
+  pull_request:
+    paths: ['upwell/**', 'upwell.json']
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx upwell policy validate
+      - run: npx upwell releases validate
+      # The diff against what's live, and who each risky change affects. Needs no token.
+      - run: npx upwell publish --dry-run
+```
+
+```yaml title=".github/workflows/upwell-publish.yml"
+name: Upwell publish
+on:
+  push:
+    branches: [main]
+    paths: ['upwell/**', 'upwell.json']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      # The merged pull request was the review, so --confirm accepts risky changes.
+      # Use --yes instead to make them fail here and publish those by hand.
+      - run: npx upwell publish --confirm
+        env:
+          GH_TOKEN: ${{ secrets.UPWELL_PUBLISH_TOKEN }}
+```
+
+Publish once by hand first (`npx upwell publish`) and commit the `upwell.json` it writes: CI then
+updates the same gist or repo instead of creating a new one.
+
+| Target | `UPWELL_PUBLISH_TOKEN` |
+| --- | --- |
+| Gist | A personal access token with the `gist` scope. The workflow's own `GITHUB_TOKEN` can't write gists |
+| Public repo | A fine-grained token with `contents: write` on that repo. If the policy repo *is* the repo running the workflow, use `${{ secrets.GITHUB_TOKEN }}` and `permissions: contents: write` |
+
+## Coding agents
+
+Agents can run the whole release flow above. Everything they need:
+
+- `--json` on every command prints exactly one JSON value on stdout:
+  `{ "ok": true, "data": … }` or `{ "ok": false, "error": { "code": "…", "message": "…" } }`.
+- Without a terminal nothing prompts. Writes need `--yes`; changes that affect installs fail with
+  `CONFIRMATION_REQUIRED` (exit code 3) and list the affected installs in `error.risks`, so the
+  agent can ask you before re-running with `--confirm`.
+- `--dry-run` on every command that writes.
+- `upwell explain` answers "what would a user on build X see?" with the app's own engine.
+- `upwell doctor --json` finds setup problems, each with a `code` and a `fix`.
+- The [error codes and exit codes](/docs/reference/cli#scripts-ci-and-agents) are stable.
+
+Paste this into your app repo's `AGENTS.md` (or `CLAUDE.md`):
+
+```md title="AGENTS.md"
+## App updates (Upwell)
+
+The update policy and OTA release notes are `upwell/policy.json` and `upwell/releases.json`,
+published to the URLs in `upwell.json`. Change them only with the Upwell CLI (`npx upwell …`,
+always with `--json`), never by hand:
+
+- After `eas update`: `npx upwell releases add --from-eas-update <eas update --json output> --kind fix|content|feature --yes --json`
+- After a store release is live: `npx upwell policy set latest --platform <android|ios> --version <v> --build <b> --released-at today --yes --json`
+- Then: `npx upwell publish --yes --json`
+- To check what a user on a build sees: `npx upwell explain --platform <p> --build <b> --version <v> --runtime <r> --json`
+- To check the setup: `npx upwell doctor --json`
+
+If a command fails with CONFIRMATION_REQUIRED, show me `error.risks` and wait for my go-ahead
+before re-running it with `--confirm`. Never raise `minimum` unless I ask for a forced update.
+```

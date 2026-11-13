@@ -213,7 +213,7 @@ describe('policy set latest / minimum', () => {
       'raises the ios minimum from 3.0.0 (build 1) to 3.2.0 (build 1): installs below it must update before they can use the app'
     );
     expect((await box.run([...raise, '--build', '1', '--confirm'])).code).toBe(0);
-    expect(box.read(POLICY).ios.minimum).toEqual({ version: '3.2.0', build: 1 });
+    expect(box.read(POLICY).ios.minimum).toEqual({ version: '3.2.0', build: '1' });
   });
 
   it('treats a first minimum as risky, and asks in a terminal', async () => {
