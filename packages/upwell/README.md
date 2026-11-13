@@ -186,6 +186,21 @@ staleness: 5 days (Play)
 → store.required: required: build 290 < minimum 300
 ```
 
+## Analytics
+
+Upwell sends nothing anywhere itself. `onEvent` hands you typed events (checks, store prompts and
+what users did with them, store flows, OTA downloads and restarts, errors) to forward to the
+analytics you already use:
+
+```tsx
+<UpwellProvider ota={expoUpdatesAdapter()} onEvent={(e) => posthog.capture(`upwell_${e.type}`, e)}>
+```
+
+Events carry the app version, build, runtime, running update and a random per-install id; nothing
+personal. See
+[Send update events to your analytics](https://docs.upwell.run/guides/analytics-events) for
+PostHog and Firebase Analytics examples and the dashboards worth building.
+
 ## Headless API
 
 ```tsx

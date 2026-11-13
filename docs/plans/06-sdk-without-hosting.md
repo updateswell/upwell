@@ -47,20 +47,21 @@ emitted by the controller (not the UI kit), so headless users get them too. Team
 PostHog, Amplitude, Firebase Analytics, Sentry breadcrumbs, … with a few lines; Upwell sends
 nothing anywhere itself.
 
-| Event            | When                                                                             | Fields (besides the common ones)                                          |
-| ---------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `check`          | Every completed check                                                            | decision kind and reason, policy source (fresh / cached / none), duration |
-| `prompt_shown`   | A recommended/required prompt became visible (first time per target per session) | decision kind, target                                                     |
-| `prompt_action`  | User chose update / later / dismiss                                              | action                                                                    |
-| `store_flow`     | Store flow finished                                                              | flow, result                                                              |
-| `ota_downloaded` | OTA download finished                                                            | update id                                                                 |
-| `ota_applied`    | Restart into an OTA update requested                                             | update id, apply mode                                                     |
-| `updated_seen`   | The "Updated" sheet was shown or `markSeen()` called                             | release id                                                                |
-| `error`          | Anything passed to `onError`                                                     | context, message                                                          |
+| Event            | When                                                                                         | Fields (besides the common ones)                                          |
+| ---------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `check`          | Every completed check (not throttled ones)                                                   | decision kind and reason, policy source (fresh / cached / none), duration |
+| `prompt_shown`   | The decision becomes recommended/required (first time per decision kind, target and session) | decision kind, reason, flow, target                                       |
+| `prompt_action`  | User chose update / later / dismiss (declined Play's dialog) on a store prompt               | action, decision kind, target                                             |
+| `store_flow`     | Store flow finished (a Play flow falling back to the store link reports both)                | flow, result                                                              |
+| `ota_downloaded` | OTA download finished                                                                        | new update id (when the adapter reports it)                               |
+| `ota_applied`    | Restart into an OTA update requested                                                         | new update id, apply mode                                                 |
+| `updated_seen`   | The "Updated" sheet was closed or `markUpdateSeen()` called                                  | release id                                                                |
+| `error`          | Anything passed to `onError`                                                                 | context, message                                                          |
 
-Common fields: platform, app version, build, runtime, update id, install source, SDK version,
-timestamp, and the per-install random `installationId` the native module already generates.
-No device identifiers, no user ids, nothing personal.
+Common fields: platform, app version, build, runtime, running update id, install source, SDK
+version, timestamp, the per-install random `installationId` the native module already generates,
+and the `simulate()` scenario (null on the real device). No device identifiers, no user ids,
+nothing personal.
 
 ## Session 1 · Zero-policy mode
 
@@ -77,14 +78,48 @@ No device identifiers, no user ids, nothing personal.
 
 ## Session 2 · Event stream
 
-- [ ] Event types in `@upwell/core`.
-- [ ] `onEvent` in the controller; emit each event at the right place, with tests for each
+- [x] Event types in `@upwell/core`.
+- [x] `onEvent` in the controller; emit each event at the right place, with tests for each
       (simulation makes most of these easy: `createSimulation()` + actions).
-- [ ] `useAppUpdate()` unchanged; document `onEvent` in the controller and React references.
-- [ ] Docs recipe "Send update events to your analytics" (PostHog and Firebase Analytics
+- [x] `useAppUpdate()` unchanged; document `onEvent` in the controller and React references.
+- [x] Docs recipe "Send update events to your analytics" (PostHog and Firebase Analytics
       examples), plus the dashboards worth building: installs per build, stranded share, prompt
       conversion.
-- [ ] Changeset (minor).
+- [x] Changeset (minor).
+
+Decided in session 2 (2026-11-13):
+
+- **`prompt_shown` fires when the decision calls for the prompt**, not from the UI. The UI kit
+  renders its prompt for exactly `store.recommended` and `store.required`, and the controller
+  already counts a prompt as shown at that point (for `maxPrompts`), so the event matches the
+  prompt cap, works headless and keeps the UI kit untouched. The cost: a custom UI that doesn't
+  render the prompt still gets the event; the docs say so. It's deduplicated per decision kind and
+  target, so a recommendation that escalates to required is reported again.
+- **Prompt events cover store prompts only** (recommended and required: the ones snoozes and caps
+  apply to). An OTA "restart to update" prompt shows up as `ota_applied` with `applyMode: 'prompt'`.
+- **`prompt_action`:** `update` when a store flow starts from a prompt, `later` for `dismiss()`,
+  `dismiss` when the user declines Play's own dialog (`canceled`, which also snoozes a
+  recommendation). The App Store sheet can't tell, so iOS only reports `update`.
+- **OTA events carry `newUpdateId`**, separate from the common `updateId` (the running update).
+  `OtaAdapter.download()` may now return `{ updateId }`; `expoUpdatesAdapter()` returns the
+  fetched manifest's id. Returning nothing still works, and the id is then null.
+- **`nextLaunch` OTA updates have no `ota_applied`**: the OTA tool applies them on its own at the
+  next launch. The next `check` carries the new `updateId`.
+- **`updated_seen` fires on `markUpdateSeen()`** while an update is being announced, not when the
+  sheet appears: "seen" means the user closed it.
+- **A `simulation` common field** (the `simulate()` scenario or null), so dev-menu sessions can be
+  filtered out of dashboards instead of being silently dropped.
+- **Install fields are nullable**: an `error` (and the `check` that follows) can happen before the
+  device was read, e.g. without the native module.
+- **A failing handler goes to `onError` with context `onEvent`** (thrown or rejected), never
+  through `reportError`, so it can't loop into another `error` event. A throwing `onError` there
+  is swallowed.
+- **`sdkVersion` is read from `package.json` at runtime** (`src/version.ts`), so the version
+  changesets writes is the one reported without a generated file.
+- **`StoreFlowResult` moved to `@upwell/core`** (the `store_flow` event needs it); `upwell` still
+  exports it.
+- **The recipe is a new guide page** (`guides/analytics-events.mdx`), linked from "Debugging and
+  analytics", which now points to `onEvent` instead of wrapping actions by hand.
 
 ## Session 3 · Policy from the CLI's published URL
 

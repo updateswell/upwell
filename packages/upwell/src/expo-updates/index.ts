@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
 
-import type { OtaAdapter, OtaCheckResult, OtaRuntime } from '../ota/types';
+import type { OtaAdapter, OtaCheckResult, OtaDownloadResult, OtaRuntime } from '../ota/types';
 
 export interface ExpoUpdatesAdapterOptions {
   /** Check for updates in development too (they are always off in dev builds). Default false. */
@@ -48,8 +48,11 @@ export function expoUpdatesAdapter(options: ExpoUpdatesAdapterOptions = {}): Ota
       return { available: result.isAvailable };
     },
 
-    async download(): Promise<void> {
-      await Updates.fetchUpdateAsync();
+    async download(): Promise<OtaDownloadResult> {
+      const result = await Updates.fetchUpdateAsync();
+      // No manifest for a roll back to the embedded update.
+      const id: unknown = (result?.manifest as { id?: unknown } | undefined)?.id;
+      return { updateId: typeof id === 'string' ? id : null };
     },
 
     async apply(): Promise<void> {
