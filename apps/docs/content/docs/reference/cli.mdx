@@ -73,8 +73,9 @@ Sets Upwell up in an Expo app, in one go after showing what it will do:
    starting `minimum` there blocks nobody. An existing policy is kept.
 4. Writes `upwell.json`.
 
-Then it prints the `UpwellProvider` snippet to add to your app. Rebuild the native app afterwards:
-Upwell adds native code.
+Then it prints the `UpwellProvider` snippet to add to your app and, in a terminal, offers to
+[publish](#publish) the policy right away. Rebuild the native app afterwards: Upwell adds native
+code.
 
 | Option | |
 | --- | --- |
@@ -116,6 +117,41 @@ fix. Errors make it exit with code 1, so it can gate CI.
 The published URLs come from `--policy-url` / `--releases-url`, or `publish.urls` in
 `upwell.json`. When there is one, the app is compared with the published copy, since that's what
 devices see. `--offline` skips the network.
+
+### publish
+
+```bash
+npx @upwell/cli publish [--to gist|github] [--repo owner/name] [--dry-run] [--confirm]
+```
+
+Puts `policy.json`, and `releases.json` when you have one, at a stable public URL:
+
+| Target | URL |
+| --- | --- |
+| `gist` (default) | `https://gist.githubusercontent.com/<owner>/<gist id>/raw/policy.json` |
+| `github` (`--repo`) | `https://raw.githubusercontent.com/<owner>/<repo>/<branch>/<path>/policy.json` |
+
+It validates both files, shows the diff against what's live, and applies the same rules as
+`policy set`: `--yes` without a terminal, and `--confirm` for changes that affect installs. The
+first run records the target and URLs in `upwell.json` (`"publish"`), so later runs, `status` and
+`doctor` know them. See [Hosting the policy](/docs/policy/hosting) for auth, caching and rollback.
+
+| Option | |
+| --- | --- |
+| `--to` | `gist` or `github` |
+| `--repo` | A **public** repo for `--to github` (implies it) |
+| `--branch` | Default: the repo's default branch |
+| `--path` | Directory in the repo. Default `upwell` |
+
+### status
+
+```bash
+npx @upwell/cli status
+```
+
+Where the documents are published, the last revision, whether each published file matches the local
+one, and whether the raw URL already serves it (GitHub caches raw files for 5 minutes). Works
+without a token for public targets.
 
 ### policy validate
 
@@ -267,4 +303,9 @@ Every command takes `--json`. stdout then holds exactly one JSON value:
 | `NOT_AN_EXPO_APP` | `init` outside an Expo app (no `expo` dependency) |
 | `INSTALL_FAILED` | `npx expo install` failed during `init`; nothing was written |
 | `CHECKS_FAILED` | `doctor` found errors; `findings` lists everything it found |
+| `AUTH_MISSING`, `AUTH_INVALID` | No GitHub token, or GitHub rejected it |
+| `GITHUB_FORBIDDEN` | GitHub refused: usually a missing `gist` scope or `contents: write` |
+| `GITHUB_UNREACHABLE`, `GITHUB_ERROR` | Network or other GitHub errors |
+| `GIST_NOT_FOUND` | The gist recorded in `upwell.json` was deleted |
+| `REPO_NOT_FOUND`, `REPO_PRIVATE` | The `--repo` target doesn't exist, or isn't public |
 | `INTERNAL` | A bug: please [report it](https://github.com/updateswell/upwell/issues) |

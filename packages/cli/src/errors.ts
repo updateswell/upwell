@@ -26,6 +26,14 @@ export type ErrorCode =
   | 'NOT_AN_EXPO_APP'
   | 'INSTALL_FAILED'
   | 'CHECKS_FAILED'
+  | 'AUTH_MISSING'
+  | 'AUTH_INVALID'
+  | 'GITHUB_UNREACHABLE'
+  | 'GITHUB_FORBIDDEN'
+  | 'GITHUB_ERROR'
+  | 'GIST_NOT_FOUND'
+  | 'REPO_NOT_FOUND'
+  | 'REPO_PRIVATE'
   | 'INTERNAL';
 
 const EXIT_BY_CODE: Partial<Record<ErrorCode, number>> = {

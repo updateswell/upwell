@@ -118,30 +118,13 @@ export async function writeDocument(
     return { ...base, changed: true, written: false, diff };
   }
 
-  if (risks.length > 0 && !options.confirm) {
-    if (!ctx.interactive) {
-      throw new CliError(
-        'CONFIRMATION_REQUIRED',
-        'This change affects existing installs; re-run with --confirm to apply it',
-        { file: path, risks, diff, lines: risks }
-      );
-    }
-    ctx.print();
-    if (!(await ctx.io.confirm('Apply this change?'))) {
-      throw new CliError('ABORTED', 'Nothing written');
-    }
-  } else if (!options.yes && !options.confirm) {
-    if (!ctx.interactive) {
-      throw new CliError('CONFIRMATION_REQUIRED', `Re-run with --yes to write ${shown}`, {
-        file: path,
-        diff,
-      });
-    }
-    ctx.print();
-    if (!(await ctx.io.confirm(`Write ${shown}?`))) {
-      throw new CliError('ABORTED', 'Nothing written');
-    }
-  }
+  await confirmChange(ctx, {
+    risks,
+    options,
+    question: `Write ${shown}?`,
+    retry: `Re-run with --yes to write ${shown}`,
+    details: { file: path, diff },
+  });
 
   writeAtomic(path, text);
   ctx.print(`Wrote ${shown}`);
@@ -154,4 +137,45 @@ export function writeAtomic(path: string, text: string): void {
   const tmp = join(dirname(path), `.${basename(path)}.${process.pid}.tmp`);
   writeFileSync(tmp, text);
   renameSync(tmp, path);
+}
+
+/**
+ * The rule for every change: interactive runs ask; everything else needs `--yes`, and risky
+ * changes need `--confirm` (which implies `--yes`). Throws when the change may not go ahead.
+ */
+export async function confirmChange(
+  ctx: Context,
+  change: {
+    risks: string[];
+    options: WriteOptions;
+    /** Asked in a terminal for a change without risks. */
+    question: string;
+    /** The error message without a terminal and without --yes. */
+    retry: string;
+    /** Extra fields for the JSON error. */
+    details?: Record<string, unknown>;
+  }
+): Promise<void> {
+  const { risks, options } = change;
+  if (risks.length > 0 && !options.confirm) {
+    if (!ctx.interactive) {
+      throw new CliError(
+        'CONFIRMATION_REQUIRED',
+        'This change affects existing installs; re-run with --confirm to apply it',
+        { ...change.details, risks, lines: risks }
+      );
+    }
+    ctx.print();
+    if (!(await ctx.io.confirm('Apply this change?'))) {
+      throw new CliError('ABORTED', 'Nothing written');
+    }
+  } else if (!options.yes && !options.confirm) {
+    if (!ctx.interactive) {
+      throw new CliError('CONFIRMATION_REQUIRED', change.retry, change.details);
+    }
+    ctx.print();
+    if (!(await ctx.io.confirm(change.question))) {
+      throw new CliError('ABORTED', 'Nothing written');
+    }
+  }
 }

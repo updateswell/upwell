@@ -90,8 +90,9 @@ No device identifiers, no user ids, nothing personal.
 
 Depends on plan 05 session 3.
 
-- [ ] Docs and the CLI's printed snippet use the published gist/repo URL directly
+- [x] Docs and the CLI's printed snippet use the published gist/repo URL directly
       (`policy="https://gist.githubusercontent.com/…/raw/policy.json"`): no new SDK API needed.
+      (Done with plan 05 session 3.)
 - [ ] Verify on the smoke app's release build that `text/plain` responses from GitHub parse and
       that a published change arrives within ~5 minutes.
 - [ ] If the URL turns out to need special handling (headers, cache busting), add it to `jsonUrl`

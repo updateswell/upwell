@@ -112,10 +112,13 @@ describe('init', () => {
 
     const asked = await box.run(['init', '--static', '--skip-install'], {
       tty: true,
-      answers: [true],
+      answers: [true, false],
     });
     expect(asked.code).toBe(0);
-    expect(asked.asked).toEqual(['Continue?']);
+    expect(asked.asked).toEqual([
+      'Continue?',
+      'Publish upwell/policy.json to a public GitHub gist now?',
+    ]);
     expect(asked.stdout).toContain('Install it yourself: npx expo install upwell');
   });
 
@@ -171,5 +174,17 @@ describe('init', () => {
     expect(r.code).toBe(1);
     expect(r.json.error.code).toBe('INSTALL_FAILED');
     expect(() => box.read('upwell/policy.json')).toThrow();
+  });
+
+  it('offers to publish in a terminal, and finishes setup even when that fails', async () => {
+    freshExpoApp();
+    // No token and no gh login: publishing fails, init still succeeds.
+    const r = await box.run(['init', '--static', '--skip-install'], {
+      tty: true,
+      answers: [true, true],
+    });
+    expect(r.code).toBe(0);
+    expect(r.stderr).toContain('warning: publishing failed: No GitHub token to publish with');
+    expect(box.read('upwell/policy.json').schemaVersion).toBe(1);
   });
 });

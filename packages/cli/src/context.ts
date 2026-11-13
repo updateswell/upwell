@@ -14,8 +14,8 @@ export interface Io {
   now: () => number;
   /** Runs a program and collects its output. Never throws for a non-zero exit. */
   exec: (command: string, args: string[], options: { cwd: string }) => Promise<ExecResult>;
-  /** HTTP GET. Throws on network errors, like `fetch`. */
-  fetch: (url: string) => Promise<HttpResponse>;
+  /** An HTTP request (GET by default). Throws on network errors, like `fetch`. */
+  fetch: (url: string, init?: HttpRequest) => Promise<HttpResponse>;
 }
 
 export interface ExecResult {
@@ -23,6 +23,12 @@ export interface ExecResult {
   code: number | null;
   stdout: string;
   stderr: string;
+}
+
+export interface HttpRequest {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
 }
 
 export interface HttpResponse {

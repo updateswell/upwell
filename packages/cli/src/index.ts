@@ -33,8 +33,8 @@ run(process.argv.slice(2), {
       child.on('error', (e) => resolve({ code: null, stdout, stderr: stderr + e.message }));
       child.on('close', (code) => resolve({ code, stdout, stderr }));
     }),
-  fetch: async (url) => {
-    const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  fetch: async (url, init = {}) => {
+    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
     return {
       status: res.status,
       headers: Object.fromEntries(res.headers),

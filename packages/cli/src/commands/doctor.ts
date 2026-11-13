@@ -270,7 +270,7 @@ async function checkDocuments(
       code: 'POLICY_NOT_PUBLISHED',
       severity: 'info',
       message: `${displayPath(ctx.io.cwd, policyPath)} exists but no published URL is known, so it wasn't checked as devices see it`,
-      fix: 'Pass --policy-url <url> (the URL your app uses)',
+      fix: 'upwell publish puts it at a public URL; if you host it yourself, pass --policy-url <url>',
     });
   } else {
     add({
@@ -393,7 +393,7 @@ async function checkPublished(
       code: `${KIND}_OUT_OF_DATE`,
       severity: 'warning',
       message: `The published ${kind} at ${url} differs from the local file`,
-      fix: 'Publish the local file (upwell publish, coming soon), or pull the published one',
+      fix: 'upwell publish (or, if the published copy is right, update the local file from it)',
     });
   }
   return result.value;

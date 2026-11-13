@@ -9,6 +9,7 @@ import {
   DEFAULT_RELEASES,
   displayPath,
   documentPath,
+  loadConfig,
 } from '../config';
 import type { Context } from '../context';
 import {
@@ -20,6 +21,7 @@ import {
 } from '../documents';
 import { CliError } from '../errors';
 import { JsonText } from '../json-text';
+import { publish } from './publish';
 import { PLATFORMS, POLICY_SCHEMA_URL, parseBuild } from './shared';
 
 export interface InitOptions {
@@ -217,7 +219,7 @@ export async function init(ctx: Context, options: InitOptions): Promise<void> {
   for (const line of snippet.split('\n')) ctx.print(`  ${line}`);
   ctx.print();
   const next = [
-    'Host upwell/policy.json at a public HTTPS URL and use it as `policy` (`upwell publish` is coming)',
+    'Publish the policy and use the printed URL as `policy`: npx @upwell/cli publish (or host upwell/policy.json at any HTTPS URL)',
     'Rebuild the native app: Upwell adds native code, so an OTA update can’t add it',
     'Check the setup: npx @upwell/cli doctor --policy-url <url>',
   ];
@@ -228,6 +230,23 @@ export async function init(ctx: Context, options: InitOptions): Promise<void> {
   }
   ctx.print('Next:');
   next.forEach((n, i) => ctx.print(`  ${i + 1}. ${n}`));
+
+  // In a terminal, offer the first step right away.
+  const published = isObject(loadConfig(root).config.publish);
+  if (ctx.interactive && !options.dryRun && !published && existsSync(policyPath)) {
+    ctx.print();
+    if (await ctx.io.confirm('Publish upwell/policy.json to a public GitHub gist now?')) {
+      ctx.print();
+      try {
+        await publish(ctx, { yes: true });
+      } catch (e) {
+        // Setup is done; publishing can be retried on its own.
+        const error = e instanceof CliError ? e : new CliError('INTERNAL', String(e));
+        ctx.warn(`publishing failed: ${error.message}. Run \`upwell publish\` to retry.`);
+        for (const line of error.details?.lines ?? []) ctx.warn(line);
+      }
+    }
+  }
 
   ctx.done({
     root,

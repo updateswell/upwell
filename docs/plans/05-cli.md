@@ -217,17 +217,38 @@ Decided in session 2 (2026-11-13):
 
 ## Session 3 · `publish` and `status`
 
-- [ ] GitHub token discovery (`GITHUB_TOKEN`, `GH_TOKEN`, `gh auth token`) with clear errors for
+- [x] GitHub token discovery (`GITHUB_TOKEN`, `GH_TOKEN`, `gh auth token`) with clear errors for
       a missing token or scope.
-- [ ] `gist` target: create on first publish, update after; `github` target: commit via the
+- [x] `gist` target: create on first publish, update after; `github` target: commit via the
       Contents API with the file's current `sha`.
-- [ ] Diff against the live copy and the guardrails (`--confirm`), `--dry-run`.
-- [ ] `status`: URLs, local vs published, last published revision.
-- [ ] Tests with MSW for both targets; one real run against a throwaway gist.
+- [x] Diff against the live copy and the guardrails (`--confirm`), `--dry-run`.
+- [x] `status`: URLs, local vs published, last published revision.
+- [x] Tests for both targets: an in-memory GitHub behind the injected `fetch` (no MSW needed, see
+      below). Read-only real run against the GitHub API (`publish --repo updateswell/upwell
+    --path docs/examples --dry-run`): unchanged files come back "up to date", an edit shows the
+      right diff.
+- [ ] One real run against a throwaway gist. Not done in the session: it creates a public gist on
+      the maintainer's account, so it waits for them.
 - [ ] End to end on the smoke app: `init` → `publish` → the release build reads the gist; change
       `minimum`, `publish`, see the required update within ~5 minutes.
-- [ ] Docs: rewrite "Hosting the policy" around `publish` (gist and repo), keep "any URL" as the
+- [x] Docs: rewrite "Hosting the policy" around `publish` (gist and repo), keep "any URL" as the
       self-hosting section.
+
+Decided in session 3 (2026-11-13):
+
+- **No MSW.** Commands already get `fetch` through `Io`, so tests pass a fake GitHub (gists, repo
+  contents with sha checks, commits, raw URLs with a stale cache) instead of patching the network.
+- **The same risk rules as `policy set`**, now in `src/risks.ts`, compare the live policy with the
+  local one. A first publish has no risks: no app reads the URL yet.
+- **Repo target: one commit per changed file.** The Contents API can't commit two files at once;
+  the Git Data API could, but four calls per publish isn't worth it for two small files.
+- **Private repos are refused** (`REPO_PRIVATE`), missing ones too (`REPO_NOT_FOUND`, with the
+  `gh repo create … --public` command). `publish` never creates repos.
+- **`--dry-run` needs no token**: it only reads public data. `status` works without one too.
+- **`init` offers to publish** at the end, in a terminal only; if that fails, setup still
+  succeeds and says how to retry.
+- **`upwell.json` gets `publish`** (`to`, `gist` or `repo`/`branch`/`path`, and `urls`) on the
+  first publish, created if needed, edited in place otherwise.
 
 ## Session 4 · Automation recipes and agents
 

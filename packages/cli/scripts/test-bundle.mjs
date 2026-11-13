@@ -61,6 +61,8 @@ writeFileSync(
   JSON.stringify({ expo: { version: '1.0.0', plugins: ['upwell'] } })
 );
 runs.push(['doctor', '--static', '--offline', '--json', { cwd: app }]);
+// Not published yet: no network either.
+runs.push(['status', '--json', { cwd: app }]);
 
 for (const entry of runs) {
   const options = typeof entry.at(-1) === 'object' ? entry.pop() : {};

@@ -5,6 +5,7 @@ import { doctor } from './commands/doctor';
 import { explain, type ExplainOptions } from './commands/explain';
 import { init } from './commands/init';
 import { policySetOtaRuntime, policySetRef, policyValidate } from './commands/policy';
+import { publish, status } from './commands/publish';
 import { releasesAdd, releasesList, releasesRemove, releasesValidate } from './commands/releases';
 import { schema } from './commands/schema';
 import { Context, type GlobalOptions, type Io } from './context';
@@ -75,6 +76,28 @@ export async function run(argv: string[], io: Io): Promise<number> {
     .option('--file <path>', 'local policy file')
     .option('--releases-file <path>', 'local releases file')
     .action((opts) => runCommand(opts, (ctx) => doctor(ctx, opts)));
+
+  // ── publishing ────────────────────────────────────────────────────────────
+  withWrite(withJson(program.command('publish')))
+    .description('put policy.json and releases.json at a public URL (a GitHub gist or repo)')
+    .addOption(
+      new Option('--to <target>', 'gist (default) or github (a public repo)').choices([
+        'gist',
+        'github',
+      ])
+    )
+    .option('--repo <owner/name>', 'public repo for --to github')
+    .option('--branch <branch>', "repo branch (default: the repo's default branch)")
+    .option('--path <dir>', 'directory in the repo (default: upwell)')
+    .option('--file <path>', 'policy file')
+    .option('--releases-file <path>', 'releases file')
+    .action((opts) => runCommand(opts, (ctx) => publish(ctx, opts)));
+
+  withJson(program.command('status'))
+    .description('where the documents are published, and whether that matches the local files')
+    .option('--file <path>', 'policy file')
+    .option('--releases-file <path>', 'releases file')
+    .action((opts) => runCommand(opts, (ctx) => status(ctx, opts)));
 
   // ── policy ────────────────────────────────────────────────────────────────
   const policy = program
