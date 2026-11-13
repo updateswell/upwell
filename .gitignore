@@ -59,6 +59,7 @@ yarn-error.log
 # Build output
 packages/upwell/plugin/build/
 packages/core/dist/
+packages/cli/dist/
 # Copied from packages/core/schemas by the build
 packages/upwell/schemas/
 coverage/

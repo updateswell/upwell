@@ -52,8 +52,16 @@ and `platforms` values, ISO timestamps, and unique ids.
 
 ## Validating in CI
 
-The validators are plain functions from [`@upwell/core`](/docs/reference/core#upwellcore), which has
-no dependencies, so a plain Node script can run them and fail CI before you publish a broken policy:
+The [CLI](/docs/reference/cli) runs the same validators and fails with exit code 1 on errors:
+
+```bash
+npx @upwell/cli policy validate
+npx @upwell/cli releases validate
+```
+
+Or call them yourself: the validators are plain functions from
+[`@upwell/core`](/docs/reference/core#upwellcore), which has no dependencies, so a plain Node script
+can run them and fail CI before you publish a broken policy:
 
 ```js title="scripts/check-policy.mjs"
 import { readFileSync } from 'node:fs';

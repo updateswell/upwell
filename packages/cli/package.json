@@ -1,0 +1,63 @@
+{
+  "name": "@upwell/cli",
+  "version": "0.0.0",
+  "description": "Command line for Upwell: validate and edit policy.json and releases.json, explain decisions, and (soon) publish them without hosting anything",
+  "type": "module",
+  "bin": {
+    "upwell": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "prepublishOnly": "npm run build",
+    "test:bundle": "node scripts/test-bundle.mjs"
+  },
+  "keywords": [
+    "upwell",
+    "cli",
+    "react-native",
+    "expo",
+    "app-update",
+    "force-update",
+    "ota",
+    "policy"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/updateswell/upwell.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/updateswell/upwell/issues"
+  },
+  "author": "ommgh <om.works01@gmail.com> (https://github.com/ommgh)",
+  "license": "MIT",
+  "homepage": "https://docs.upwell.run/docs/reference/cli",
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@upwell/core": "^0.2.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/plugin-transform-modules-commonjs": "^7.29.7",
+    "@babel/preset-typescript": "^7.29.7",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.20.5",
+    "babel-jest": "^30.5.2",
+    "commander": "^14.0.0",
+    "jest": "^30.5.2",
+    "jsonc-parser": "^3.3.1",
+    "tsdown": "^0.23.1",
+    "typescript": "~6.0.3"
+  }
+}

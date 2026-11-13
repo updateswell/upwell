@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "types": ["jest", "node"],
+    "noEmit": true,
+    // Core's sources, so edits there show up without building it. tsdown bundles nothing from
+    // core except its JSON Schemas; at runtime the CLI imports the published @upwell/core.
+    "paths": {
+      "@upwell/core": ["../core/src/index.ts"],
+      "@upwell/core/schemas/*": ["../core/schemas/*"]
+    }
+  },
+  "include": ["src"]
+}

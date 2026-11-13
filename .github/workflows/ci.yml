@@ -53,6 +53,8 @@ jobs:
       - run: npm run build
       - run: npm pack --dry-run
         working-directory: packages/upwell
+      # Runs the built CLI: Jest only covers its sources.
+      - run: npm run test:bundle -w @upwell/cli
 
   android:
     name: Android (compile module)

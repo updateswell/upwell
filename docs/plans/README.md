@@ -21,7 +21,7 @@ session.
 | 02  | [`@upwell/core`](02-core-package.md)                                                                                            | `upwell`             | 01         | Done        |
 | 03  | [`platform` repo and the landing page](https://github.com/updateswell/platform/blob/main/docs/plans/03-platform-and-landing.md) | `platform`           | 01         | Done        |
 | 04  | [API: hosting on Cloudflare](https://github.com/updateswell/platform/blob/main/docs/plans/04-api.md)                            | `platform`           | 02, 03     | Parked      |
-| 05  | [CLI](05-cli.md)                                                                                                                | `upwell`             | 02         | Not started |
+| 05  | [CLI](05-cli.md)                                                                                                                | `upwell`             | 02         | In progress |
 | 06  | [SDK without hosting](06-sdk-without-hosting.md)                                                                                | `upwell`             | —          | Not started |
 | 07  | [Analytics](https://github.com/updateswell/platform/blob/main/docs/plans/07-analytics.md)                                       | `platform`, `upwell` | 04, 06     | Parked      |
 | 08  | [Accounts and auth](https://github.com/updateswell/platform/blob/main/docs/plans/08-accounts-and-auth.md)                       | `platform`           | 04         | Parked      |
