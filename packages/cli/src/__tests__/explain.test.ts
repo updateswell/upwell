@@ -140,6 +140,6 @@ describe('program', () => {
   it('shows help', async () => {
     const r = await box.run(['--help']);
     expect(r.code).toBe(0);
-    expect(r.stdout).toContain('Exit codes: 0 ok · 1 failed · 2 usage · 3 confirmation required');
+    expect(r.stdout).toContain('Exit codes: 0 ok · 1 failed (doctor: errors found) · 2 usage');
   });
 });

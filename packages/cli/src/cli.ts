@@ -1,7 +1,9 @@
 import { Argument, Command, CommanderError, Option } from 'commander';
 
 import { version } from '../package.json';
+import { doctor } from './commands/doctor';
 import { explain, type ExplainOptions } from './commands/explain';
+import { init } from './commands/init';
 import { policySetOtaRuntime, policySetRef, policyValidate } from './commands/policy';
 import { releasesAdd, releasesList, releasesRemove, releasesValidate } from './commands/releases';
 import { schema } from './commands/schema';
@@ -15,7 +17,7 @@ Every command takes --json and then prints only { "ok": true, "data": … } or
 Without a terminal, with CI set or with --json, nothing prompts: writes need --yes, and changes
 that affect existing installs need --confirm.
 
-Exit codes: 0 ok · 1 failed · 2 usage · 3 confirmation required
+Exit codes: 0 ok · 1 failed (doctor: errors found) · 2 usage · 3 confirmation required
 Docs: https://docs.upwell.run/docs/reference/cli`;
 
 /** Runs one command line. Returns the exit code instead of exiting, so tests can call it. */
@@ -53,6 +55,26 @@ export async function run(argv: string[], io: Io): Promise<number> {
       exitCode = error.exitCode;
     }
   };
+
+  // ── setup ─────────────────────────────────────────────────────────────────
+  withJson(program.command('init'))
+    .description('set Upwell up in this Expo app: install it, add the plugin, write a policy')
+    .option('-y, --yes', 'make the changes without asking')
+    .option('--dry-run', 'show what would change, change nothing')
+    .option('--with-expo-updates', 'also install expo-updates, for OTA updates')
+    .option('--skip-install', "don't run npx expo install")
+    .option('--static', 'read app.json directly instead of running npx expo config')
+    .action((opts) => runCommand(opts, (ctx) => init(ctx, opts)));
+
+  withJson(program.command('doctor'))
+    .description('find setup problems before your users do')
+    .option('--policy-url <url>', 'the policy URL the app uses (default: from upwell.json)')
+    .option('--releases-url <url>', 'the releases URL the app uses (default: from upwell.json)')
+    .option('--offline', "don't fetch the published documents")
+    .option('--static', 'read app.json directly instead of running npx expo config')
+    .option('--file <path>', 'local policy file')
+    .option('--releases-file <path>', 'local releases file')
+    .action((opts) => runCommand(opts, (ctx) => doctor(ctx, opts)));
 
   // ── policy ────────────────────────────────────────────────────────────────
   const policy = program

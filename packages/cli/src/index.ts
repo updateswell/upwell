@@ -1,7 +1,11 @@
 #!/usr/bin/env node
+import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 
 import { run } from './cli';
+import type { ExecResult } from './context';
+
+const FETCH_TIMEOUT_MS = 15_000;
 
 run(process.argv.slice(2), {
   cwd: process.cwd(),
@@ -18,6 +22,25 @@ run(process.argv.slice(2), {
     }
   },
   now: () => Date.now(),
+  exec: (command, args, { cwd }) =>
+    new Promise<ExecResult>((resolve) => {
+      // `npx` is `npx.cmd` on Windows, which needs a shell.
+      const child = spawn(command, args, { cwd, shell: process.platform === 'win32' });
+      let stdout = '';
+      let stderr = '';
+      child.stdout.on('data', (d) => (stdout += d));
+      child.stderr.on('data', (d) => (stderr += d));
+      child.on('error', (e) => resolve({ code: null, stdout, stderr: stderr + e.message }));
+      child.on('close', (code) => resolve({ code, stdout, stderr }));
+    }),
+  fetch: async (url) => {
+    const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+    return {
+      status: res.status,
+      headers: Object.fromEntries(res.headers),
+      body: await res.text(),
+    };
+  },
 }).then(
   (code) => {
     process.exitCode = code;

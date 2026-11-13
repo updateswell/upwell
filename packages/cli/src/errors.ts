@@ -23,6 +23,9 @@ export type ErrorCode =
   | 'RELEASE_NOT_FOUND'
   | 'CONFIRMATION_REQUIRED'
   | 'ABORTED'
+  | 'NOT_AN_EXPO_APP'
+  | 'INSTALL_FAILED'
+  | 'CHECKS_FAILED'
   | 'INTERNAL';
 
 const EXIT_BY_CODE: Partial<Record<ErrorCode, number>> = {

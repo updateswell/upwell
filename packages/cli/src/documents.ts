@@ -143,11 +143,15 @@ export async function writeDocument(
     }
   }
 
+  writeAtomic(path, text);
+  ctx.print(`Wrote ${shown}`);
+  return { ...base, changed: true, written: true, diff };
+}
+
+/** Writes next to the target and renames, so an interrupted write never leaves half a file. */
+export function writeAtomic(path: string, text: string): void {
   mkdirSync(dirname(path), { recursive: true });
-  // Write next to the target and rename, so an interrupted write never leaves half a file.
   const tmp = join(dirname(path), `.${basename(path)}.${process.pid}.tmp`);
   writeFileSync(tmp, text);
   renameSync(tmp, path);
-  ctx.print(`Wrote ${shown}`);
-  return { ...base, changed: true, written: true, diff };
 }

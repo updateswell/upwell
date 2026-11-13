@@ -3,13 +3,22 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import { run } from '../cli';
-import type { Io } from '../context';
+import type { ExecResult, HttpResponse, Io } from '../context';
 
 export const EXAMPLE_POLICY = join(__dirname, '../../../../docs/examples/policy.json');
 export const EXAMPLE_RELEASES = join(__dirname, '../../../../docs/examples/releases.json');
 
 /** 2026-11-13T12:00:00Z */
 export const NOW = Date.UTC(2026, 10, 13, 12);
+
+export interface FakeProcess {
+  /** Calls made through `exec`, as "command arg arg". */
+  calls: string[];
+  /** Answers `exec` calls; default: exit code 1 (e.g. `npx expo config` unavailable). */
+  exec?: (command: string, args: string[]) => ExecResult;
+  /** Answers `fetch` by URL; a missing URL throws like a network error. */
+  responses?: Record<string, HttpResponse>;
+}
 
 export interface Result {
   code: number;
@@ -29,7 +38,13 @@ export interface Sandbox {
   /** Runs the CLI in the sandbox: no terminal unless `tty`, answers prompts from `answers`. */
   run(
     argv: string[],
-    options?: { tty?: boolean; answers?: boolean[]; env?: Io['env']; cwd?: string }
+    options?: {
+      tty?: boolean;
+      answers?: boolean[];
+      env?: Io['env'];
+      cwd?: string;
+      process?: FakeProcess;
+    }
   ): Promise<Result>;
   cleanup(): void;
 }
@@ -74,6 +89,21 @@ export function sandbox(): Sandbox {
           return answer;
         },
         now: () => NOW,
+        exec: async (command, args) => {
+          options.process?.calls.push([command, ...args].join(' '));
+          return (
+            options.process?.exec?.(command, args) ?? {
+              code: 1,
+              stdout: '',
+              stderr: 'not available in tests',
+            }
+          );
+        },
+        fetch: async (url) => {
+          const response = options.process?.responses?.[url];
+          if (!response) throw new Error(`getaddrinfo ENOTFOUND ${new URL(url).hostname}`);
+          return response;
+        },
       });
       let json: unknown;
       try {

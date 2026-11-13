@@ -109,7 +109,7 @@ Reads the resolved app config (`npx expo config --json`), `package.json`, `eas.j
 `upwell.json` and the policy, and reports each finding with a fix. Several come straight from what
 broke during device testing:
 
-- `upwell` installed; config plugin in the app config.
+- `upwell` installed; config plugin in the app config (info only: the plugin is optional).
 - With `expo-updates`: `updates.url` set; a channel configured (`eas.json` build profile or
   `updates.requestHeaders`); `runtimeVersion` set. A `runtimeVersion` policy (`appVersion`,
   `fingerprint`) needs `upwell` ≥ 0.1.3 for stranded detection in debug builds.
@@ -188,15 +188,32 @@ Decided in session 1 (2026-11-13):
 
 ## Session 2 · `init` and `doctor`
 
-- [ ] `doctor` with the checks above; each finding has a code, a severity and a fix. Test against
+- [x] `doctor` with the checks above; each finding has a code, a severity and a fix. Test against
       fixture app configs (including the smoke app's config before and after its fixes).
-- [ ] `init`: detect an Expo app, run `npx expo install upwell` (and optionally `expo-updates`),
+- [x] `init`: detect an Expo app, run `npx expo install upwell` (and optionally `expo-updates`),
       add the plugin to the app config when it's static JSON (print instructions for
       `app.config.ts`), write `upwell/policy.json` with `latest` and `minimum` set to the
       current version and `upwell.json`, print the provider snippet. Offers to run `publish` at
       the end. Don't edit the user's source files in v1; the snippet is enough (and agents can
       apply it).
-- [ ] Try both on a fresh `create-expo-app` project.
+- [x] Try both on a fresh `create-expo-app` project.
+
+Decided in session 2 (2026-11-13):
+
+- **`doctor` exits 1 when it finds errors** (`CHECKS_FAILED`, with every finding in the JSON), so
+  it can gate CI. Warnings and info never fail it.
+- **The app is compared with the published policy** when a URL is known (that's what devices see),
+  else with the local file. URLs come from `--policy-url` / `--releases-url` or `publish.urls` in
+  `upwell.json`; session 3 writes the latter.
+- **`OTA_RUNTIME_DIFFERS` tells two cases apart:** a build on an older runtime than the policy is
+  stranded from the start (bump the version); a newer one waits for `policy set ota-runtime`.
+- **Build comparisons are skipped with `appVersionSource: remote`** in eas.json: the local config
+  doesn't know the build numbers then.
+- **`init` asks once** for the whole plan (or `--yes`), installs first and writes files only when
+  the install worked. It doesn't offer `publish` yet (session 3); the "next steps" mention it.
+- **`init` starts the policy with `minimum` = `latest` = the current version.** Installs without
+  Upwell never read the policy, so this blocks nobody, and it's a valid policy to publish as is.
+- **Inline arrays stay inline** when `init` adds the plugin (`"plugins": ["expo-router", "upwell"]`).
 
 ## Session 3 · `publish` and `status`
 

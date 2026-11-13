@@ -12,6 +12,23 @@ export interface Io {
   confirm: (question: string) => Promise<boolean>;
   /** Epoch ms. */
   now: () => number;
+  /** Runs a program and collects its output. Never throws for a non-zero exit. */
+  exec: (command: string, args: string[], options: { cwd: string }) => Promise<ExecResult>;
+  /** HTTP GET. Throws on network errors, like `fetch`. */
+  fetch: (url: string) => Promise<HttpResponse>;
+}
+
+export interface ExecResult {
+  /** Exit code, or null when the program couldn't be started or was killed. */
+  code: number | null;
+  stdout: string;
+  stderr: string;
+}
+
+export interface HttpResponse {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
 }
 
 export interface GlobalOptions {
