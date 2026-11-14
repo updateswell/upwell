@@ -142,22 +142,49 @@ broke during device testing:
 
 No secrets.
 
-## Stack (proposed)
+## Stack
 
 Node ≥ 20, TypeScript, `commander`, `@upwell/core` (workspace dependency, published as a normal
 dependency), bundled with `tsdown` so `npx @upwell/cli` starts fast. Plain `fetch` for the GitHub
 REST API (two endpoints; no Octokit). Versioned independently of `upwell` (not in the Changesets
-`fixed` group). Tests with Vitest: unit tests for commands, and MSW for GitHub.
+`fixed` group). Tests with Jest, like the other packages: unit tests for commands, and MSW for GitHub.
+
+Decided in session 1 (2026-11-13):
+
+- **Jest, not Vitest.** One test runner in the repo; `npm test -- --ci --coverage` from the root
+  passes flags to every workspace. Commands run in-process through `run(argv, io)` with a fake
+  terminal, so tests cover prompts, `CI` and `--json` without spawning processes. A separate
+  `test:bundle` script runs the built `dist/index.js` in CI (it caught `jsonc-parser`'s UMD `main`,
+  which the bundler can't follow).
+- **Edits keep formatting.** Documents are edited as text with `jsonc-parser`'s `modify()`, so a
+  change touches only its own lines (they're reviewed in PRs). A value that was on one line stays on
+  one line; new keys go in the usual order (`latest` before `minimum`, …).
+- **Exit codes:** 0 ok, 1 failed, 2 usage, 3 confirmation required. Scripts branch on
+  `error.code`; the full list is on the docs page.
+- **`--confirm` implies `--yes`.** In a terminal, risky changes ask instead (after listing who is
+  affected).
+- **`releases add` needs `--kind`, even with `--from-eas-update`.** The kind is what users and App
+  Review are told the update is; guessing `fix` would be wrong for features.
+- **EAS update groups:** one release per group when the platforms share a runtime (the group id
+  matches on both); with per-platform runtimes (`fingerprint`), one release per platform keyed by
+  its update id.
+- **`explain` takes store info as flags** (`--play-version-code`, `--play-priority`,
+  `--play-staleness-days`, `--app-store-version`, `--app-store-released-at`, `--ota`) and
+  `--no-policy`, so it can show the Play flows and zero-policy mode. Without them there is no store
+  info, as on a device the store can't reach.
+- **Also added:** `releases validate` (the same as `policy validate`, for the other document).
 
 ## Session 1 · Package and local document commands
 
-- [ ] `packages/cli` workspace package: `bin: { "upwell": "./dist/index.js" }`, build, tests, CI.
-- [ ] Output layer: human vs `--json`, error codes, exit codes, TTY and `CI` detection.
-- [ ] `policy validate`, `policy set … --file`, `releases add … --file` (incl.
+- [x] `packages/cli` workspace package: `bin: { "upwell": "./dist/index.js" }`, build, tests, CI.
+- [x] Output layer: human vs `--json`, error codes, exit codes, TTY and `CI` detection.
+- [x] `policy validate`, `policy set … --file`, `releases add … --file` (incl.
       `--from-eas-update`), `releases list/remove --file`, `explain`, `schema`.
 - [ ] Publish the package: bootstrap `@upwell/cli` by hand once, then trusted publishing (as in
-      plan 02).
-- [ ] Docs page "CLI" in `apps/docs`, generated from the command definitions where practical.
+      plan 02). **Must happen before the "version packages" PR with `@upwell/cli` is merged**, or
+      the release job can't publish it.
+- [x] Docs page "CLI" in `apps/docs` (`reference/cli.mdx`), written by hand: the options tables
+      read better than generated help. Generate it later if it drifts.
 
 ## Session 2 · `init` and `doctor`
 

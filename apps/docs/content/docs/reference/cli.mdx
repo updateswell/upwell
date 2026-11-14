@@ -1,0 +1,206 @@
+---
+title: CLI
+description: The upwell command. Validate and edit policy.json and releases.json, and see what any build would be told.
+icon: Terminal
+---
+
+`@upwell/cli` is the command line for your policy and release notes. It edits the files in your
+repo, so every change goes through review like any other, and it runs the same engine as the app:
+`upwell explain` tells you exactly what a device on a given build would see.
+
+```bash
+npx @upwell/cli policy validate
+```
+
+It's not installed with `upwell`. Run it with `npx`, or add it as a dev dependency to pin a version
+in CI:
+
+```bash
+npm install -D @upwell/cli
+npx upwell --help
+```
+
+Node 20 or newer.
+
+## Files
+
+Commands read and write `upwell/policy.json` and `upwell/releases.json`. To keep them somewhere
+else, add an `upwell.json` at the root of the app's repo (the CLI finds it from any subdirectory):
+
+```json title="upwell.json"
+{
+  "policy": "config/policy.json",
+  "releases": "config/releases.json"
+}
+```
+
+`--file <path>` overrides both for one command.
+
+## Changing files safely
+
+Commands that write show the change as a diff first, and only touch the lines they change: your
+formatting, key order and inline objects stay as they were.
+
+- In a terminal, they ask before writing.
+- Without a terminal (CI, scripts, agents), with `CI` set, or with `--json`, they never ask:
+  pass `--yes` to write.
+- Changes that affect installs already out there need `--confirm`, and the CLI says who is
+  affected:
+  - raising `minimum` (or setting it for the first time): installs below it are blocked until
+    they update
+  - lowering `latest`: installs in between stop being offered an update
+  - changing `ota.latestRuntimeVersion`: installs on the old runtime become stranded
+- `--dry-run` shows the diff and writes nothing.
+
+A change that would make the document invalid is refused with the validator's errors.
+
+## Commands
+
+### policy validate
+
+```bash
+upwell policy validate [--file <path>]
+```
+
+Runs [`validatePolicy()`](/docs/policy/validation), the validator the app runs on every fetched
+policy. Errors fail the command (exit code 1); warnings are printed and don't.
+
+### policy set latest / minimum
+
+```bash
+upwell policy set latest  --platform android --version 3.4.0 --build 340 [--released-at today]
+upwell policy set minimum --platform ios --version 3.2.0 --build 1
+```
+
+| Option | |
+| --- | --- |
+| `--platform` | `android` or `ios` (required) |
+| `--version` | Display version (required) |
+| `--build` | Build number: versionCode on Android, CFBundleVersion on iOS (required) |
+| `--released-at` | ISO date it went live in the store, or `today`. Drives staleness on iOS. Setting the same version again keeps its date |
+
+Creates the policy file if there isn't one.
+
+### policy set ota-runtime
+
+```bash
+upwell policy set ota-runtime 3.4.0 [--platform android]
+```
+
+Sets `ota.latestRuntimeVersion`, the runtime your newest OTA updates target. Without `--platform`
+it sets every platform the policy has.
+
+### releases add
+
+```bash
+upwell releases add --id <update group id> --kind fix --notes "Fixed checkout on iOS 27"
+upwell releases add --from-eas-update eas-update.json --kind fix
+```
+
+| Option | |
+| --- | --- |
+| `--kind` | `fix`, `content` or `feature` (required) |
+| `--id` | The update group id or an update id |
+| `--notes` | What changed, in words users read. With `--from-eas-update`, defaults to the update message |
+| `--runtime` | Runtime version. Default: the policy's `ota.latestRuntimeVersion` for those platforms |
+| `--platform` | `android`, `ios` or `android,ios` (default: both) |
+| `--published-at` | ISO timestamp (default: now) |
+| `--from-eas-update` | A file with the output of `eas update --json` |
+
+New releases go first in the file. Ids are unique (ignoring case).
+
+With `--from-eas-update`, the id, platforms, runtime and date come from EAS:
+
+```bash
+eas update --branch production --message "Fixed checkout" --json --non-interactive > eas-update.json
+npx upwell releases add --from-eas-update eas-update.json --kind fix --yes
+```
+
+When both platforms share a runtime, that's one release with the update group id. With
+per-platform runtimes (the `fingerprint` runtime policy), each platform gets its own release with
+its update id. The SDK matches either id.
+
+### releases list / remove / validate
+
+```bash
+upwell releases list [--platform ios] [--runtime 3.4.0]
+upwell releases remove <id>
+upwell releases validate
+```
+
+### explain
+
+Runs [`explain()`](/docs/reference/core) on your policy with a device described by flags, and
+prints the decision and every rule it checked. With the
+[example policy](https://github.com/updateswell/upwell/blob/main/docs/examples/policy.json):
+
+```bash
+upwell explain --platform android --build 330 --runtime 3.3.0 --play-version-code 340
+```
+
+```
+store.recommended (playFlexible)
+  recommended: stranded on runtime 3.3.0, latest OTA needs 3.4.0
+
+  installed: android 330 (build 330), source play, runtime 3.3.0
+  newer: policy latest 340 > installed build 330
+  staleness: 2 days (policy latest.releasedAt)
+  stranded: yes, runtime 3.3.0 != latest OTA runtime 3.4.0
+  minimum: build 330 meets minimum 300
+  stranded escalation: 2 days < strandedRequireAfterDays 14
+  → store.recommended: recommended: stranded on runtime 3.3.0, latest OTA needs 3.4.0
+```
+
+| Option | |
+| --- | --- |
+| `--platform`, `--build` | The installed app (required) |
+| `--version` | Installed version (required on iOS, which compares versions first) |
+| `--runtime` | Installed OTA runtime, for stranded detection |
+| `--source` | `play`, `appStore`, `testFlight`, `sideload` or `unknown`. Default: the platform's store |
+| `--now` | Evaluate at another date, e.g. to see when `requireAfterDays` kicks in |
+| `--installation-id` | The install id that picks the rollout bucket (default `upwell-cli`) |
+| `--play-version-code`, `--play-priority`, `--play-staleness-days` | What Google Play reports. Without them there is no Play info, as on a device Play can't reach |
+| `--app-store-version`, `--app-store-released-at` | What the App Store lookup returns |
+| `--ota` | The OTA adapter's status: `available`, `downloading`, `ready`, … |
+| `--no-policy` | Explain an app without a policy |
+
+### schema
+
+```bash
+upwell schema policy > policy.schema.json
+```
+
+Prints the JSON Schema for `policy` or `releases`.
+
+## Scripts, CI and agents
+
+Every command takes `--json`. stdout then holds exactly one JSON value:
+
+```json
+{ "ok": true, "data": { "file": "/repo/upwell/policy.json", "changed": true, "written": true, "diff": ["…"], "risks": [] } }
+```
+
+```json
+{ "ok": false, "error": { "code": "CONFIRMATION_REQUIRED", "message": "…", "risks": ["raises the android minimum from …"] } }
+```
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | Done |
+| `1` | Failed: see `error.code` |
+| `2` | Usage: bad or missing options (`USAGE`) |
+| `3` | Needs `--yes`, or `--confirm` for a risky change (`CONFIRMATION_REQUIRED`) |
+
+| `error.code` | |
+| --- | --- |
+| `USAGE` | Bad or missing options |
+| `FILE_NOT_FOUND` | The policy, releases or EAS file doesn't exist |
+| `INVALID_JSON` | A file isn't valid JSON |
+| `INVALID_CONFIG` | `upwell.json` is malformed |
+| `INVALID_DOCUMENT` | The document is invalid, or would be after the change; `errors` lists why |
+| `INVALID_EAS_UPDATE` | The `--from-eas-update` file isn't `eas update --json` output |
+| `RELEASE_EXISTS` | `releases add` with an id that's already there |
+| `RELEASE_NOT_FOUND` | `releases remove` with an unknown id |
+| `CONFIRMATION_REQUIRED` | Re-run with `--yes` (or `--confirm`); `risks` says who is affected |
+| `ABORTED` | Answered no at the prompt |
+| `INTERNAL` | A bug: please [report it](https://github.com/updateswell/upwell/issues) |

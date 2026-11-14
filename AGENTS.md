@@ -45,6 +45,8 @@ packages/upwell/              the SDK, published as `upwell`; depends on @upwell
   ios/                        Swift module (App Store sheet, install info)
   plugin/                     config plugin (source in plugin/src, built to plugin/build)
   schemas/                    copied from packages/core/schemas by the build (gitignored)
+packages/cli/                 the `upwell` command, published as `@upwell/cli` (plan 05); depends on @upwell/core,
+                              bundles commander and jsonc-parser (tsdown), edits documents as text to keep formatting
 example/                      Expo app using the packages' sources (Metro maps `upwell/*` and `@upwell/core` to them)
 docs/                         recipes, example policy files, and plans/
 apps/docs/                    docs site, docs.upwell.run (Fumadocs; own install)
@@ -56,7 +58,8 @@ apps/docs/                    docs site, docs.upwell.run (Fumadocs; own install)
 npm test             # Jest: core in plain Node; controller, UI, adapters with jest-expo
 npm run lint         # ESLint, zero warnings allowed
 npm run typecheck    # tsc for both packages and the plugin
-npm run build        # packages/core/dist (tsdown: ESM + CJS + types), packages/upwell/build and plugin/build
+npm run build        # packages/core/dist (tsdown: ESM + CJS + types), packages/upwell/build and plugin/build,
+                     # packages/cli/dist (one ESM file; `npm run test:bundle -w @upwell/cli` runs it)
 ```
 
 Run them from the root: they run in every workspace (ESLint runs once, from the root). Run all
