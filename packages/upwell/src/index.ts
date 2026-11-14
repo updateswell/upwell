@@ -1,6 +1,6 @@
 export * from '@upwell/core';
 export { UpwellController, createUpwell, type UpwellOptions, type UpwellState } from './controller';
-export type { OtaAdapter, OtaCheckResult, OtaRuntime } from './ota/types';
+export type { OtaAdapter, OtaCheckResult, OtaDownloadResult, OtaRuntime } from './ota/types';
 export {
   jsonUrl,
   staticSource,
@@ -13,7 +13,6 @@ export type {
   BaseInstalledInfo,
   KeyValueStorage,
   StoreFlowContext,
-  StoreFlowResult,
   StoreProgress,
   UpwellPlatform,
 } from './platform/types';

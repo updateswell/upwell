@@ -169,6 +169,10 @@ export interface DecisionInput {
 
 export type StoreFlow = 'playImmediate' | 'playFlexible' | 'appStoreSheet' | 'storeLink';
 
+/** How a store flow ended. See the store flows docs for what each platform reports. */
+export type StoreFlowResult =
+  'accepted' | 'canceled' | 'failed' | 'notStarted' | 'dismissed' | 'opened';
+
 export interface TargetVersion {
   version: string | null;
   build: string | null;

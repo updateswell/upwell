@@ -96,5 +96,5 @@ Simulation uses separate in-memory storage, so it never touches these values.
 - **Host OTA bundles.** expo-updates (or your OTA tool) still does that.
 - **Run a backend.** The policy is a static file. You can serve it from an API if you want to, but nothing requires one.
 - **Collect analytics.** Nothing is sent anywhere except the policy and releases fetches you configure and the
-  store lookups. Use [`onDecision`](/docs/guides/debugging-and-analytics) to log to your own analytics.
+  store lookups. Use [`onEvent`](/docs/guides/analytics-events) to send update events to your own analytics.
 - **Behave differently for App Review.** It never will. See [Transparent OTA](/docs/guides/transparent-ota).

@@ -52,8 +52,9 @@ guarantee, and this isn't legal advice.
 <Accordion title="Does Upwell collect any data?">
 
 No. It fetches the URLs you configure, asks Play Core (Android) and the iTunes lookup API (iOS) about
-updates, and stores a few values on the device. The `installationId` used for rollout buckets never
-leaves the device. Use `onDecision` to send events to your own analytics.
+updates, and stores a few values on the device. Upwell never sends the `installationId` used for
+rollout buckets anywhere. [`onEvent`](/docs/guides/analytics-events) hands update events (which include it)
+to your code, to forward to your own analytics if you want to.
 
 </Accordion>
 <Accordion title="Why compare build numbers instead of versions?">
