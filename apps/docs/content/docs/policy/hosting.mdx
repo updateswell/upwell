@@ -1,18 +1,88 @@
 ---
 title: Hosting the policy
-description: Where to put policy.json, how caching works, and what happens when it can't be fetched.
+description: Publish policy.json to a free public URL with the CLI, or host it anywhere. How caching works, and what happens when it can't be fetched.
 icon: Cloud
 ---
 
-The policy is a static JSON file. Anything that serves HTTPS works.
+The policy is a static JSON file that every install downloads. You don't need a server for it: the
+[CLI](/docs/reference/cli) publishes it to GitHub, or you can serve it from anything that speaks
+HTTPS.
+
+## Publish with the CLI
+
+Keep `upwell/policy.json` (and `upwell/releases.json`) in your app's repo, review changes in pull
+requests, and publish with one command:
+
+```bash
+npx @upwell/cli publish
+```
+
+The first run creates a **public GitHub gist** with both files, prints their URLs, and records the
+gist in `upwell.json`. Pass the policy URL to your app:
+
+```tsx
+<UpwellProvider policy="https://gist.githubusercontent.com/acme/aa5a315d61ae9438b18d/raw/policy.json">
+```
+
+The URL never changes. Later runs update the same gist: they show the diff against what's live
+first, and changes that affect installs already out there (raising `minimum`, lowering `latest`,
+changing the OTA runtime) need `--confirm`. `npx @upwell/cli status` shows whether the published
+copy matches your local files.
+
+### A public repo instead of a gist
+
+```bash
+npx @upwell/cli publish --repo acme/app-updates [--branch main] [--path upwell]
+```
+
+This commits both files to the repo (one commit per changed file) and serves them from
+`https://raw.githubusercontent.com/acme/app-updates/main/upwell/policy.json`. The repo must be
+**public**: raw URLs of private repos need a token, which can't ship inside an app. That's why
+publishing doesn't use your app's own repo, which is usually private.
+
+### Authentication
+
+`publish` uses `GITHUB_TOKEN` or `GH_TOKEN` when set (CI), otherwise the GitHub CLI's login
+(`gh auth login --scopes gist`). Gists need the `gist` scope; a repo target needs `contents: write`
+on that repo. Upwell has no account or credentials of its own, and nothing passes through Upwell's
+servers.
+
+### Caching
+
+Gists and raw repo files are served with `Cache-Control: max-age=300`, so a published change
+reaches devices within about 5 minutes. Don't use URLs pinned to a revision (they never change), and
+don't put jsDelivr in front of GitHub for this: its cache for branch URLs is much longer.
+
+### History and rollback
+
+Gists and repos keep every revision, and `publish` prints the revision it created. To roll back,
+publish an older version of the file:
+
+```bash
+git checkout <commit> -- upwell/policy.json
+npx @upwell/cli publish --confirm
+```
+
+<Callout title="Published files are public">
+  Anyone with the link can read them, and they always were: every install of your app downloads
+  them. Never put secrets in the policy or the release notes.
+</Callout>
+
+## Host it yourself
+
+Anything that serves HTTPS works, and Upwell never needs an account:
 
 | Host | Notes |
 | --- | --- |
 | A CDN (CloudFront, Cloudflare, Fastly) | Set a short cache TTL (e.g. 60 s), so a change reaches devices quickly |
 | S3, R2, GCS bucket | Make the object public, or use `headers` for auth |
-| GitHub Pages / raw files | Easy to review policy changes in pull requests. Pages caches for about 10 minutes |
+| GitHub Pages | Easy to review policy changes in pull requests. Pages caches for about 10 minutes |
 | Your API | Return the JSON from any endpoint. You can generate it, e.g. from your release pipeline |
 | Firebase Remote Config, LaunchDarkly, … | Use a [custom source](/docs/guides/custom-sources-and-adapters) |
+
+Check a self-hosted URL the way a device sees it with
+`npx @upwell/cli doctor --policy-url <url>`: HTTPS, reachable, valid, and cached for 5 minutes or
+less.
 
 ## Fetching
 
@@ -100,6 +170,9 @@ const env = __DEV__ ? 'staging' : 'production';
 ## Release checklist
 
 1. Ship the new build to the store and wait until it's live (and rolled out, on Play).
-2. Update `latest` (with `releasedAt`) in the policy.
-3. Once the first OTA update for the new runtime is published, update `ota.latestRuntimeVersion`.
+2. Update `latest` (with `releasedAt`) in the policy:
+   `npx @upwell/cli policy set latest --platform android --version 3.5.0 --build 350 --released-at today`
+3. Once the first OTA update for the new runtime is published, update `ota.latestRuntimeVersion`:
+   `npx @upwell/cli policy set ota-runtime 3.5.0`
 4. Raise `minimum` only when you really need to block older builds.
+5. Publish: `npx @upwell/cli publish` (with `--confirm` for steps 3 and 4).

@@ -1,6 +1,9 @@
 // Runs the built CLI (dist/index.js) once per command. Jest tests the sources; this catches what
 // only breaks in the bundle (a dependency the bundler can't follow, a missing inlined schema).
 import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const cli = fileURLToPath(new URL('../dist/index.js', import.meta.url));
@@ -47,10 +50,28 @@ const runs = [
   ],
 ];
 
-for (const args of runs) {
-  const out = execFileSync(process.execPath, [cli, ...args], { encoding: 'utf8' });
+// A minimal app for doctor. --static and --offline: no `npx expo` download, no network.
+const app = mkdtempSync(join(tmpdir(), 'upwell-bundle-'));
+writeFileSync(
+  join(app, 'package.json'),
+  JSON.stringify({ dependencies: { expo: '*', upwell: '*' } })
+);
+writeFileSync(
+  join(app, 'app.json'),
+  JSON.stringify({ expo: { version: '1.0.0', plugins: ['upwell'] } })
+);
+runs.push(['doctor', '--static', '--offline', '--json', { cwd: app }]);
+// Not published yet: no network either.
+runs.push(['status', '--json', { cwd: app }]);
+
+for (const entry of runs) {
+  const options = typeof entry.at(-1) === 'object' ? entry.pop() : {};
+  const args = entry;
+  const out = execFileSync(process.execPath, [cli, ...args], { encoding: 'utf8', ...options });
   if (args.includes('--json') && JSON.parse(out).ok !== true) {
     throw new Error(`upwell ${args.join(' ')} failed:\n${out}`);
   }
   console.log(`ok  upwell ${args.join(' ')}`);
 }
+
+rmSync(app, { recursive: true, force: true });

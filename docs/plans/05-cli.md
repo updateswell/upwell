@@ -109,7 +109,7 @@ Reads the resolved app config (`npx expo config --json`), `package.json`, `eas.j
 `upwell.json` and the policy, and reports each finding with a fix. Several come straight from what
 broke during device testing:
 
-- `upwell` installed; config plugin in the app config.
+- `upwell` installed; config plugin in the app config (info only: the plugin is optional).
 - With `expo-updates`: `updates.url` set; a channel configured (`eas.json` build profile or
   `updates.requestHeaders`); `runtimeVersion` set. A `runtimeVersion` policy (`appVersion`,
   `fingerprint`) needs `upwell` ≥ 0.1.3 for stranded detection in debug builds.
@@ -188,41 +188,92 @@ Decided in session 1 (2026-11-13):
 
 ## Session 2 · `init` and `doctor`
 
-- [ ] `doctor` with the checks above; each finding has a code, a severity and a fix. Test against
+- [x] `doctor` with the checks above; each finding has a code, a severity and a fix. Test against
       fixture app configs (including the smoke app's config before and after its fixes).
-- [ ] `init`: detect an Expo app, run `npx expo install upwell` (and optionally `expo-updates`),
+- [x] `init`: detect an Expo app, run `npx expo install upwell` (and optionally `expo-updates`),
       add the plugin to the app config when it's static JSON (print instructions for
       `app.config.ts`), write `upwell/policy.json` with `latest` and `minimum` set to the
       current version and `upwell.json`, print the provider snippet. Offers to run `publish` at
       the end. Don't edit the user's source files in v1; the snippet is enough (and agents can
       apply it).
-- [ ] Try both on a fresh `create-expo-app` project.
+- [x] Try both on a fresh `create-expo-app` project.
+
+Decided in session 2 (2026-11-13):
+
+- **`doctor` exits 1 when it finds errors** (`CHECKS_FAILED`, with every finding in the JSON), so
+  it can gate CI. Warnings and info never fail it.
+- **The app is compared with the published policy** when a URL is known (that's what devices see),
+  else with the local file. URLs come from `--policy-url` / `--releases-url` or `publish.urls` in
+  `upwell.json`; session 3 writes the latter.
+- **`OTA_RUNTIME_DIFFERS` tells two cases apart:** a build on an older runtime than the policy is
+  stranded from the start (bump the version); a newer one waits for `policy set ota-runtime`.
+- **Build comparisons are skipped with `appVersionSource: remote`** in eas.json: the local config
+  doesn't know the build numbers then.
+- **`init` asks once** for the whole plan (or `--yes`), installs first and writes files only when
+  the install worked. It doesn't offer `publish` yet (session 3); the "next steps" mention it.
+- **`init` starts the policy with `minimum` = `latest` = the current version.** Installs without
+  Upwell never read the policy, so this blocks nobody, and it's a valid policy to publish as is.
+- **Inline arrays stay inline** when `init` adds the plugin (`"plugins": ["expo-router", "upwell"]`).
 
 ## Session 3 · `publish` and `status`
 
-- [ ] GitHub token discovery (`GITHUB_TOKEN`, `GH_TOKEN`, `gh auth token`) with clear errors for
+- [x] GitHub token discovery (`GITHUB_TOKEN`, `GH_TOKEN`, `gh auth token`) with clear errors for
       a missing token or scope.
-- [ ] `gist` target: create on first publish, update after; `github` target: commit via the
+- [x] `gist` target: create on first publish, update after; `github` target: commit via the
       Contents API with the file's current `sha`.
-- [ ] Diff against the live copy and the guardrails (`--confirm`), `--dry-run`.
-- [ ] `status`: URLs, local vs published, last published revision.
-- [ ] Tests with MSW for both targets; one real run against a throwaway gist.
+- [x] Diff against the live copy and the guardrails (`--confirm`), `--dry-run`.
+- [x] `status`: URLs, local vs published, last published revision.
+- [x] Tests for both targets: an in-memory GitHub behind the injected `fetch` (no MSW needed, see
+      below). Read-only real run against the GitHub API (`publish --repo updateswell/upwell
+  --path docs/examples --dry-run`): unchanged files come back "up to date", an edit shows the
+      right diff.
+- [ ] One real run against a throwaway gist. Not done in the session: it creates a public gist on
+      the maintainer's account, so it waits for them.
 - [ ] End to end on the smoke app: `init` → `publish` → the release build reads the gist; change
       `minimum`, `publish`, see the required update within ~5 minutes.
-- [ ] Docs: rewrite "Hosting the policy" around `publish` (gist and repo), keep "any URL" as the
+- [x] Docs: rewrite "Hosting the policy" around `publish` (gist and repo), keep "any URL" as the
       self-hosting section.
+
+Decided in session 3 (2026-11-13):
+
+- **No MSW.** Commands already get `fetch` through `Io`, so tests pass a fake GitHub (gists, repo
+  contents with sha checks, commits, raw URLs with a stale cache) instead of patching the network.
+- **The same risk rules as `policy set`**, now in `src/risks.ts`, compare the live policy with the
+  local one. A first publish has no risks: no app reads the URL yet.
+- **Repo target: one commit per changed file.** The Contents API can't commit two files at once;
+  the Git Data API could, but four calls per publish isn't worth it for two small files.
+- **Private repos are refused** (`REPO_PRIVATE`), missing ones too (`REPO_NOT_FOUND`, with the
+  `gh repo create … --public` command). `publish` never creates repos.
+- **`--dry-run` needs no token**: it only reads public data. `status` works without one too.
+- **`init` offers to publish** at the end, in a terminal only; if that fails, setup still
+  succeeds and says how to retry.
+- **`upwell.json` gets `publish`** (`to`, `gist` or `repo`/`branch`/`path`, and `urls`) on the
+  first publish, created if needed, edited in place otherwise.
 
 ## Session 4 · Automation recipes and agents
 
-- [ ] Docs page "Automate your policy", with tested recipes:
+- [x] Docs page "Automate your policy" (`guides/automate-your-policy.mdx`), with tested recipes:
   - after `eas update`: `eas update --json … > out.json && npx upwell releases add --from-eas-update out.json && npx upwell publish --yes`
   - after a store release goes live: `npx upwell policy set latest …` then `publish` in the
     release job
   - GitHub Actions: publish on merge to `main` when `upwell/**` changed, with `GITHUB_TOKEN`
     (repo target) or a gist-scoped token
   - EAS Build hooks (`eas-build-on-success`) where they fit
-- [ ] Docs section for agents: the command list, the `--json` contract, error codes, and an
+- [x] Docs section for agents: the command list, the `--json` contract, error codes, and an
       `AGENTS.md` snippet app developers can paste into their own repos.
+
+Decided in session 4 (2026-11-13):
+
+- **"Tested" means the command sequences run in Jest** (`documented recipes` in
+  `publish.test.ts`) against the fake GitHub, exactly as the guide writes them. The workflow YAML
+  is parsed, not run: running it needs a repo with secrets.
+- **CI publishes with `--confirm`**: the merged pull request is the review. The guide offers `--yes`
+  for teams that want risky changes published by hand. A pull request check runs `validate` and
+  `publish --dry-run`, which shows the diff and risks without a token.
+- **EAS Build hooks don't fit**: a build isn't a release, so the guide says not to move `latest`
+  on build success.
+- **iOS builds are strings** in everything the CLI writes (`policy set` used to write `1`); Android
+  builds are numbers. Found by the recipe tests.
 
 ## Definition of done
 

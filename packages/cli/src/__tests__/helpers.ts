@@ -3,13 +3,26 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import { run } from '../cli';
-import type { Io } from '../context';
+import type { ExecResult, HttpRequest, HttpResponse, Io } from '../context';
 
 export const EXAMPLE_POLICY = join(__dirname, '../../../../docs/examples/policy.json');
 export const EXAMPLE_RELEASES = join(__dirname, '../../../../docs/examples/releases.json');
 
 /** 2026-11-13T12:00:00Z */
 export const NOW = Date.UTC(2026, 10, 13, 12);
+
+export interface FakeProcess {
+  /** Calls made through `exec`, as "command arg arg". */
+  calls: string[];
+  /** Answers `exec` calls; default: exit code 1 (e.g. `npx expo config` unavailable). */
+  exec?: (command: string, args: string[]) => ExecResult;
+  /** Answers GET requests by URL; a missing URL throws like a network error. */
+  responses?: Record<string, HttpResponse>;
+  /** Answers any request first; return undefined to fall through to `responses`. */
+  handler?: (request: Required<HttpRequest> & { url: string }) => HttpResponse | undefined;
+  /** Requests made through `fetch`, as "METHOD url". */
+  requests?: string[];
+}
 
 export interface Result {
   code: number;
@@ -29,7 +42,13 @@ export interface Sandbox {
   /** Runs the CLI in the sandbox: no terminal unless `tty`, answers prompts from `answers`. */
   run(
     argv: string[],
-    options?: { tty?: boolean; answers?: boolean[]; env?: Io['env']; cwd?: string }
+    options?: {
+      tty?: boolean;
+      answers?: boolean[];
+      env?: Io['env'];
+      cwd?: string;
+      process?: FakeProcess;
+    }
   ): Promise<Result>;
   cleanup(): void;
 }
@@ -74,6 +93,30 @@ export function sandbox(): Sandbox {
           return answer;
         },
         now: () => NOW,
+        exec: async (command, args) => {
+          options.process?.calls.push([command, ...args].join(' '));
+          return (
+            options.process?.exec?.(command, args) ?? {
+              code: 1,
+              stdout: '',
+              stderr: 'not available in tests',
+            }
+          );
+        },
+        fetch: async (url, init = {}) => {
+          const request = {
+            url,
+            method: init.method ?? 'GET',
+            headers: init.headers ?? {},
+            body: init.body ?? '',
+          };
+          options.process?.requests?.push(`${request.method} ${url}`);
+          const handled = options.process?.handler?.(request);
+          if (handled) return handled;
+          const response = request.method === 'GET' ? options.process?.responses?.[url] : undefined;
+          if (!response) throw new Error(`getaddrinfo ENOTFOUND ${new URL(url).hostname}`);
+          return response;
+        },
       });
       let json: unknown;
       try {

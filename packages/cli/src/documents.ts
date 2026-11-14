@@ -118,12 +118,51 @@ export async function writeDocument(
     return { ...base, changed: true, written: false, diff };
   }
 
+  await confirmChange(ctx, {
+    risks,
+    options,
+    question: `Write ${shown}?`,
+    retry: `Re-run with --yes to write ${shown}`,
+    details: { file: path, diff },
+  });
+
+  writeAtomic(path, text);
+  ctx.print(`Wrote ${shown}`);
+  return { ...base, changed: true, written: true, diff };
+}
+
+/** Writes next to the target and renames, so an interrupted write never leaves half a file. */
+export function writeAtomic(path: string, text: string): void {
+  mkdirSync(dirname(path), { recursive: true });
+  const tmp = join(dirname(path), `.${basename(path)}.${process.pid}.tmp`);
+  writeFileSync(tmp, text);
+  renameSync(tmp, path);
+}
+
+/**
+ * The rule for every change: interactive runs ask; everything else needs `--yes`, and risky
+ * changes need `--confirm` (which implies `--yes`). Throws when the change may not go ahead.
+ */
+export async function confirmChange(
+  ctx: Context,
+  change: {
+    risks: string[];
+    options: WriteOptions;
+    /** Asked in a terminal for a change without risks. */
+    question: string;
+    /** The error message without a terminal and without --yes. */
+    retry: string;
+    /** Extra fields for the JSON error. */
+    details?: Record<string, unknown>;
+  }
+): Promise<void> {
+  const { risks, options } = change;
   if (risks.length > 0 && !options.confirm) {
     if (!ctx.interactive) {
       throw new CliError(
         'CONFIRMATION_REQUIRED',
         'This change affects existing installs; re-run with --confirm to apply it',
-        { file: path, risks, diff, lines: risks }
+        { ...change.details, risks, lines: risks }
       );
     }
     ctx.print();
@@ -132,22 +171,11 @@ export async function writeDocument(
     }
   } else if (!options.yes && !options.confirm) {
     if (!ctx.interactive) {
-      throw new CliError('CONFIRMATION_REQUIRED', `Re-run with --yes to write ${shown}`, {
-        file: path,
-        diff,
-      });
+      throw new CliError('CONFIRMATION_REQUIRED', change.retry, change.details);
     }
     ctx.print();
-    if (!(await ctx.io.confirm(`Write ${shown}?`))) {
+    if (!(await ctx.io.confirm(change.question))) {
       throw new CliError('ABORTED', 'Nothing written');
     }
   }
-
-  mkdirSync(dirname(path), { recursive: true });
-  // Write next to the target and rename, so an interrupted write never leaves half a file.
-  const tmp = join(dirname(path), `.${basename(path)}.${process.pid}.tmp`);
-  writeFileSync(tmp, text);
-  renameSync(tmp, path);
-  ctx.print(`Wrote ${shown}`);
-  return { ...base, changed: true, written: true, diff };
 }

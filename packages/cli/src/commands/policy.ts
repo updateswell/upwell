@@ -15,11 +15,11 @@ import {
 } from '../documents';
 import { CliError } from '../errors';
 import { JsonText } from '../json-text';
+import { policyRisks } from '../risks';
 import {
   PLATFORMS,
   POLICY_SCHEMA_URL,
   compareRefs,
-  describeRef,
   isVersionRef,
   parseBuild,
   parseDate,
@@ -75,7 +75,8 @@ export async function policySetRef(
   const { platform } = options;
   const ref: VersionRef = {
     version: parseVersion(options.version),
-    build: parseBuild(options.build),
+    // iOS keeps CFBundleVersion as a string, like `init` and the examples; Android uses numbers.
+    build: platform === 'ios' ? String(parseBuild(options.build)) : parseBuild(options.build),
   };
   if (options.releasedAt) {
     ref.releasedAt = parseDate(options.releasedAt, ctx.io.now(), '--released-at');
@@ -100,27 +101,13 @@ export async function policySetRef(
   ensureSection(text, platform);
   text.set([platform, field], ref, PLATFORM_ORDER);
 
-  const risks: string[] = [];
-  if (field === 'minimum') {
-    if (!isVersionRef(old)) {
-      risks.push(
-        `sets a ${platform} minimum of ${describeRef(platform, ref)}: ` +
-          'installs below it must update before they can use the app'
-      );
-    } else if (compareRefs(platform, ref, old) > 0) {
-      risks.push(
-        `raises the ${platform} minimum from ${describeRef(platform, old)} to ${describeRef(platform, ref)}: ` +
-          'installs below it must update before they can use the app'
-      );
-    }
-  } else if (isVersionRef(old) && compareRefs(platform, ref, old) < 0) {
-    risks.push(
-      `lowers ${platform} latest from ${describeRef(platform, old)} to ${describeRef(platform, ref)}: ` +
-        'installs in between stop being offered an update'
-    );
-  }
-
-  requireValid(ctx, path, validatePolicy(text.value), 'would not be valid after this change');
+  const after = requireValid(
+    ctx,
+    path,
+    validatePolicy(text.value),
+    'would not be valid after this change'
+  );
+  const risks = policyRisks(policy, after);
   ctx.done(await writeDocument(ctx, { path, before: doc.text, after: text.text, risks }, options));
 }
 
@@ -149,30 +136,24 @@ export async function policySetOtaRuntime(
       ? existing
       : PLATFORMS;
 
-  const risks: string[] = [];
   for (const platform of platforms) {
     const ota = sectionOf(policy, platform)?.ota;
     if (ota !== undefined && !isJsonObject(ota)) {
       throw new CliError('INVALID_DOCUMENT', `${platform}.ota in the policy is not an object`);
     }
-    const old = ota?.latestRuntimeVersion;
-    if (old === runtime) continue;
+    if (ota?.latestRuntimeVersion === runtime) continue;
     ensureSection(text, platform);
     if (!ota) text.set([platform, 'ota'], {}, PLATFORM_ORDER);
     text.set([platform, 'ota', 'latestRuntimeVersion'], runtime, OTA_ORDER);
-
-    const days = ota?.strandedRequireAfterDays;
-    const escalation = typeof days === 'number' ? `, and required after ${days} days` : '';
-    risks.push(
-      typeof old === 'string'
-        ? `changes the ${platform} OTA runtime from ${old} to ${runtime}: installs on ${old} ` +
-            `become stranded and are offered a store update when a newer build exists${escalation}`
-        : `sets the ${platform} OTA runtime to ${runtime}: installs on any other runtime ` +
-            `become stranded and are offered a store update when a newer build exists${escalation}`
-    );
   }
 
-  requireValid(ctx, path, validatePolicy(text.value), 'would not be valid after this change');
+  const after = requireValid(
+    ctx,
+    path,
+    validatePolicy(text.value),
+    'would not be valid after this change'
+  );
+  const risks = policyRisks(policy, after);
   ctx.done(await writeDocument(ctx, { path, before: doc.text, after: text.text, risks }, options));
 }
 

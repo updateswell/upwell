@@ -50,8 +50,22 @@ export class JsonText {
     });
   }
 
-  /** Inserts into the array at `path` (its last element is the index). */
+  /** Inserts into the array at `path` (its last element is the index). An inline array stays inline. */
   insert(path: JSONPath, value: unknown): void {
+    const index = path[path.length - 1];
+    const array = findNodeAtLocation(parseTree(this.text)!, path.slice(0, -1));
+    if (array?.type === 'array' && typeof index === 'number') {
+      const old = this.text.slice(array.offset, array.offset + array.length);
+      const items = JSON.parse(old) as unknown[];
+      items.splice(index, 0, value);
+      const inline = !old.includes('\n') && inlineJson(items);
+      if (inline) {
+        this.text = applyEdits(this.text, [
+          { offset: array.offset, length: array.length, content: inline },
+        ]);
+        return;
+      }
+    }
     this.apply(path, value, { isArrayInsertion: true });
   }
 
@@ -76,10 +90,13 @@ function insertionIndex(properties: string[], key: string, order: readonly strin
   return at === -1 ? properties.length : at;
 }
 
-/** `{ "version": "3.4.0", "build": 340 }` for flat objects and scalars; null otherwise. */
+/** `{ "version": "3.4.0", "build": 340 }` or `["a", "b"]` for flat values; null otherwise. */
 function inlineJson(value: unknown): string | null {
   if (typeof value !== 'object' || value === null) return JSON.stringify(value);
-  if (Array.isArray(value)) return null;
+  if (Array.isArray(value)) {
+    if (value.some((v) => typeof v === 'object' && v !== null)) return null;
+    return `[${value.map((v) => JSON.stringify(v)).join(', ')}]`;
+  }
   const entries = Object.entries(value);
   if (entries.some(([, v]) => typeof v === 'object' && v !== null)) return null;
   if (entries.length === 0) return '{}';

@@ -78,6 +78,10 @@ a small JSON file you host on [anything that serves HTTPS](/docs/policy/hosting)
 | Stranded installs | — | ✓ |
 | Your own messages and staged rollout | — | ✓ |
 
+The quickest way needs no hosting at all: `npx @upwell/cli init` writes a policy for your current
+version, and `npx @upwell/cli publish` puts it in a public GitHub gist and prints the URL. See
+[Hosting the policy](/docs/policy/hosting).
+
 ```json title="policy.json"
 {
   "$schema": "https://upwell.run/schemas/policy.schema.json",

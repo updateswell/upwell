@@ -56,6 +56,103 @@ A change that would make the document invalid is refused with the validator's er
 
 ## Commands
 
+### init
+
+```bash
+npx @upwell/cli init [--with-expo-updates] [--yes] [--dry-run]
+```
+
+Sets Upwell up in an Expo app, in one go after showing what it will do:
+
+1. Installs `upwell` (and `expo-updates` with `--with-expo-updates`) with `npx expo install`.
+2. Adds `"upwell"` to the plugins in `app.json`. With a dynamic `app.config.js`/`.ts` it tells you
+   what to add instead: it never edits code.
+3. Writes `upwell/policy.json` with `latest` and `minimum` at the app's current version and builds,
+   and `ota.latestRuntimeVersion` when the runtime can be computed (a fixed string, or the
+   `appVersion` / `nativeVersion` policies). Installs without Upwell never read the policy, so
+   starting `minimum` there blocks nobody. An existing policy is kept.
+4. Writes `upwell.json`.
+
+Then it prints the `UpwellProvider` snippet to add to your app and, in a terminal, offers to
+[publish](#publish) the policy right away. Rebuild the native app afterwards: Upwell adds native
+code.
+
+| Option | |
+| --- | --- |
+| `--with-expo-updates` | Also install expo-updates, for OTA updates |
+| `--skip-install` | Don't run `npx expo install`; print the command instead |
+| `--static` | Read `app.json` directly instead of running `npx expo config` |
+
+### doctor
+
+```bash
+npx @upwell/cli doctor [--policy-url <url>] [--releases-url <url>] [--offline]
+```
+
+Finds setup problems before your users do. It reads the resolved app config
+(`npx expo config`, falling back to `app.json`), `package.json`, `eas.json`, `upwell.json` and your
+documents, fetches the published policy the way a device does, and reports each finding with a
+fix. Errors make it exit with code 1, so it can gate CI.
+
+| Finding | Severity | |
+| --- | --- | --- |
+| `EXPO_MISSING`, `UPWELL_MISSING` | error | Packages Upwell needs |
+| `UPWELL_NOT_INSTALLED` | warning | In package.json, not in node_modules |
+| `NO_OTA` | info | No expo-updates: store updates only |
+| `PLUGIN_NOT_CONFIGURED` | info | The config plugin is optional |
+| `UPDATES_URL_MISSING`, `RUNTIME_VERSION_MISSING` | error | expo-updates can't find or match OTA updates |
+| `RUNTIME_POLICY_NEEDS_NEWER_UPWELL` | warning | A `runtimeVersion` policy needs upwell 0.1.3+ for stranded detection in development builds |
+| `CHANNEL_MISSING` | warning | No `channel` in eas.json build profiles or `expo-channel-name` header |
+| `UPDATES_CHECK_AUTOMATICALLY` | info | expo-updates also checks on its own |
+| `POLICY_INVALID`, `POLICY_WARNING` (and `RELEASES_…`) | error / warning | The local files, with the app's validator |
+| `NO_POLICY`, `POLICY_NOT_PUBLISHED` | info | What runs without a policy, or that the published copy wasn't checked |
+| `POLICY_URL_NOT_HTTPS` | error | Android release builds block plain HTTP (a warning for `localhost` and `10.0.2.2`) |
+| `POLICY_URL_UNREACHABLE`, `POLICY_URL_INVALID` | error | Devices can't fetch it, or reject it |
+| `POLICY_CACHE_LONG` | warning | `Cache-Control` above 5 minutes delays changes |
+| `POLICY_OUT_OF_DATE` | warning | The published copy differs from the local file |
+| `LATEST_BEHIND_APP` | warning | The app being built is newer than `latest` (a reminder for after the release) |
+| `OTA_RUNTIME_DIFFERS` | warning | This build's runtime isn't the policy's OTA runtime |
+| `APP_STORE_ID_MISSING` | warning | The App Store sheet works best with `ios.appStoreId` |
+
+The published URLs come from `--policy-url` / `--releases-url`, or `publish.urls` in
+`upwell.json`. When there is one, the app is compared with the published copy, since that's what
+devices see. `--offline` skips the network.
+
+### publish
+
+```bash
+npx @upwell/cli publish [--to gist|github] [--repo owner/name] [--dry-run] [--confirm]
+```
+
+Puts `policy.json`, and `releases.json` when you have one, at a stable public URL:
+
+| Target | URL |
+| --- | --- |
+| `gist` (default) | `https://gist.githubusercontent.com/<owner>/<gist id>/raw/policy.json` |
+| `github` (`--repo`) | `https://raw.githubusercontent.com/<owner>/<repo>/<branch>/<path>/policy.json` |
+
+It validates both files, shows the diff against what's live, and applies the same rules as
+`policy set`: `--yes` without a terminal, and `--confirm` for changes that affect installs. The
+first run records the target and URLs in `upwell.json` (`"publish"`), so later runs, `status` and
+`doctor` know them. See [Hosting the policy](/docs/policy/hosting) for auth, caching and rollback.
+
+| Option | |
+| --- | --- |
+| `--to` | `gist` or `github` |
+| `--repo` | A **public** repo for `--to github` (implies it) |
+| `--branch` | Default: the repo's default branch |
+| `--path` | Directory in the repo. Default `upwell` |
+
+### status
+
+```bash
+npx @upwell/cli status
+```
+
+Where the documents are published, the last revision, whether each published file matches the local
+one, and whether the raw URL already serves it (GitHub caches raw files for 5 minutes). Works
+without a token for public targets.
+
 ### policy validate
 
 ```bash
@@ -76,7 +173,7 @@ upwell policy set minimum --platform ios --version 3.2.0 --build 1
 | --- | --- |
 | `--platform` | `android` or `ios` (required) |
 | `--version` | Display version (required) |
-| `--build` | Build number: versionCode on Android, CFBundleVersion on iOS (required) |
+| `--build` | Build number: versionCode on Android (written as a number), CFBundleVersion on iOS (written as a string) (required) |
 | `--released-at` | ISO date it went live in the store, or `today`. Drives staleness on iOS. Setting the same version again keeps its date |
 
 Creates the policy file if there isn't one.
@@ -174,6 +271,9 @@ Prints the JSON Schema for `policy` or `releases`.
 
 ## Scripts, CI and agents
 
+Recipes for EAS, GitHub Actions and coding agents (with an `AGENTS.md` snippet for your app repo)
+are in [Automate your policy](/docs/guides/automate-your-policy).
+
 Every command takes `--json`. stdout then holds exactly one JSON value:
 
 ```json
@@ -187,7 +287,7 @@ Every command takes `--json`. stdout then holds exactly one JSON value:
 | Exit code | Meaning |
 | --- | --- |
 | `0` | Done |
-| `1` | Failed: see `error.code` |
+| `1` | Failed: see `error.code` (for `doctor`: errors were found) |
 | `2` | Usage: bad or missing options (`USAGE`) |
 | `3` | Needs `--yes`, or `--confirm` for a risky change (`CONFIRMATION_REQUIRED`) |
 
@@ -203,4 +303,12 @@ Every command takes `--json`. stdout then holds exactly one JSON value:
 | `RELEASE_NOT_FOUND` | `releases remove` with an unknown id |
 | `CONFIRMATION_REQUIRED` | Re-run with `--yes` (or `--confirm`); `risks` says who is affected |
 | `ABORTED` | Answered no at the prompt |
+| `NOT_AN_EXPO_APP` | `init` outside an Expo app (no `expo` dependency) |
+| `INSTALL_FAILED` | `npx expo install` failed during `init`; nothing was written |
+| `CHECKS_FAILED` | `doctor` found errors; `findings` lists everything it found |
+| `AUTH_MISSING`, `AUTH_INVALID` | No GitHub token, or GitHub rejected it |
+| `GITHUB_FORBIDDEN` | GitHub refused: usually a missing `gist` scope or `contents: write` |
+| `GITHUB_UNREACHABLE`, `GITHUB_ERROR` | Network or other GitHub errors |
+| `GIST_NOT_FOUND` | The gist recorded in `upwell.json` was deleted |
+| `REPO_NOT_FOUND`, `REPO_PRIVATE` | The `--repo` target doesn't exist, or isn't public |
 | `INTERNAL` | A bug: please [report it](https://github.com/updateswell/upwell/issues) |
