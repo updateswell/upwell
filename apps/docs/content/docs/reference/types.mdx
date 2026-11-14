@@ -7,7 +7,7 @@ icon: Type
 All types are exported from `upwell`:
 
 ```ts
-import type { Decision, InstalledInfo, Policy, Release, StoreInfo } from 'upwell';
+import type { Decision, InstalledInfo, Policy, Release, StoreInfo, UpwellEvent } from 'upwell';
 ```
 
 ## InstalledInfo
@@ -154,9 +154,51 @@ interface PromptHistory {
 }
 ```
 
+## UpwellEvent
+
+What [`onEvent`](/docs/guides/analytics-events) receives. Narrow on `type`.
+
+```ts
+type UpwellEvent = UpwellEventBase &
+  (
+    | { type: 'check'; decision: DecisionKind; reason: string | null; policy: PolicyOrigin; durationMs: number }
+    | {
+        type: 'prompt_shown';
+        decision: PromptDecisionKind;
+        reason: RecommendedReason | RequiredReason;
+        flow: StoreFlow;
+        target: TargetVersion;
+      }
+    | { type: 'prompt_action'; action: PromptAction; decision: PromptDecisionKind; target: TargetVersion }
+    | { type: 'store_flow'; flow: StoreFlow; result: StoreFlowResult }
+    | { type: 'ota_downloaded'; newUpdateId: string | null }
+    | { type: 'ota_applied'; newUpdateId: string | null; applyMode: ApplyMode | null }
+    | { type: 'updated_seen'; releaseId: string }
+    | { type: 'error'; context: string; message: string }
+  );
+
+interface UpwellEventBase {
+  timestamp: number;                    // epoch ms
+  sdkVersion: string;                   // the upwell package version
+  platform: 'ios' | 'android';
+  appVersion: string | null;            // the install fields are null until the device was read
+  build: string | null;
+  runtimeVersion: string | null;
+  updateId: string | null;              // the running OTA update
+  installSource: InstallSource | null;
+  installationId: string | null;        // random per install
+  simulation: string | null;            // the simulate() scenario, or null
+}
+
+type PolicyOrigin = 'fresh' | 'cached' | 'none';
+type PromptDecisionKind = 'store.recommended' | 'store.required';
+type PromptAction = 'update' | 'later' | 'dismiss';
+type UpwellEventType = UpwellEvent['type'];
+```
+
 ## Adapters and platforms
 
-`OtaAdapter`, `OtaRuntime`, `OtaCheckResult`, `UpwellPlatform`, `KeyValueStorage`, `BaseInstalledInfo`,
+`OtaAdapter`, `OtaRuntime`, `OtaCheckResult`, `OtaDownloadResult`, `UpwellPlatform`, `KeyValueStorage`, `BaseInstalledInfo`,
 `StoreFlowContext`, `StoreFlowResult` and `StoreProgress` are described in
 [Custom sources and adapters](/docs/guides/custom-sources-and-adapters).
 

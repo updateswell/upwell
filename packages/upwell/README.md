@@ -72,50 +72,56 @@ The config plugin is optional:
 
 ## Quick start
 
-1. Publish a `policy.json` anywhere (a CDN, S3, GitHub Pages):
+Wrap your app:
 
-   ```json
-   {
-     "$schema": "https://upwell.run/schemas/policy.schema.json",
-     "schemaVersion": 1,
-     "android": {
-       "latest": { "version": "3.4.0", "build": 340, "releasedAt": "2026-10-18" },
-       "minimum": { "version": "3.0.0", "build": 300 },
-       "recommendAfterDays": 2,
-       "ota": { "latestRuntimeVersion": "3.4.0", "applyMode": "nextLaunch", "strandedRequireAfterDays": 14 }
-     },
-     "ios": {
-       "appStoreId": "1234567890",
-       "latest": { "version": "3.4.0", "build": "1", "releasedAt": "2026-10-18" },
-       "minimum": { "version": "3.0.0", "build": "1" },
-       "ota": { "latestRuntimeVersion": "3.4.0", "applyMode": "prompt" }
-     }
-   }
-   ```
+```tsx
+import { UpwellProvider } from 'upwell/react';
+import { expoUpdatesAdapter } from 'upwell/expo-updates';
+import { UpwellUI } from 'upwell/ui';
 
-2. Wrap your app:
+export default function App() {
+  return (
+    <UpwellProvider ota={expoUpdatesAdapter()}>
+      <RootNavigator />
+      <UpwellUI />
+    </UpwellProvider>
+  );
+}
+```
 
-   ```tsx
-   import { UpwellProvider } from 'upwell/react';
-   import { expoUpdatesAdapter } from 'upwell/expo-updates';
-   import { UpwellUI } from 'upwell/ui';
+That's it: Upwell checks on launch and when the app returns to the foreground, downloads OTA
+updates, and offers store updates that Google Play or the App Store report. `<UpwellUI />` renders
+the prompt, progress banner, restart bar, blocking screen or "Updated" sheet the current decision
+needs. Prefer your own UI? Skip `<UpwellUI />` and use [`useAppUpdate()`](#headless-api).
 
-   export default function App() {
-     return (
-       <UpwellProvider
-         policy="https://example.com/upwell/policy.json"
-         releases="https://example.com/upwell/releases.json"
-         ota={expoUpdatesAdapter()}>
-         <RootNavigator />
-         <UpwellUI />
-       </UpwellProvider>
-     );
-   }
-   ```
+To **force updates** and catch **stranded installs**, add a policy: publish a `policy.json` anywhere
+(a CDN, S3, GitHub Pages) and pass its URL:
 
-That's it: Upwell checks on launch and when the app returns to the foreground, and `<UpwellUI />`
-renders the prompt, progress banner, restart bar, blocking screen or "Updated" sheet the current
-decision needs. Prefer your own UI? Skip `<UpwellUI />` and use [`useAppUpdate()`](#headless-api).
+```json
+{
+  "$schema": "https://upwell.run/schemas/policy.schema.json",
+  "schemaVersion": 1,
+  "android": {
+    "latest": { "version": "3.4.0", "build": 340, "releasedAt": "2026-10-18" },
+    "minimum": { "version": "3.0.0", "build": 300 },
+    "recommendAfterDays": 2,
+    "ota": { "latestRuntimeVersion": "3.4.0", "applyMode": "nextLaunch", "strandedRequireAfterDays": 14 }
+  },
+  "ios": {
+    "appStoreId": "1234567890",
+    "latest": { "version": "3.4.0", "build": "1", "releasedAt": "2026-10-18" },
+    "minimum": { "version": "3.0.0", "build": "1" },
+    "ota": { "latestRuntimeVersion": "3.4.0", "applyMode": "prompt" }
+  }
+}
+```
+
+```tsx
+<UpwellProvider
+  policy="https://example.com/upwell/policy.json"
+  releases="https://example.com/upwell/releases.json"
+  ota={expoUpdatesAdapter()}>
+```
 
 ## The policy
 
@@ -179,6 +185,21 @@ newer: policy latest 340 > installed build 290
 staleness: 5 days (Play)
 → store.required: required: build 290 < minimum 300
 ```
+
+## Analytics
+
+Upwell sends nothing anywhere itself. `onEvent` hands you typed events (checks, store prompts and
+what users did with them, store flows, OTA downloads and restarts, errors) to forward to the
+analytics you already use:
+
+```tsx
+<UpwellProvider ota={expoUpdatesAdapter()} onEvent={(e) => posthog.capture(`upwell_${e.type}`, e)}>
+```
+
+Events carry the app version, build, runtime, running update and a random per-install id; nothing
+personal. See
+[Send update events to your analytics](https://docs.upwell.run/guides/analytics-events) for
+PostHog and Firebase Analytics examples and the dashboards worth building.
 
 ## Headless API
 

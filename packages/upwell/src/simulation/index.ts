@@ -10,7 +10,7 @@ import type {
 import { Platform } from 'react-native';
 
 import { getUpwellNative, type PlaySimulationConfig } from '../native/UpwellNative';
-import type { OtaAdapter, OtaCheckResult, OtaRuntime } from '../ota/types';
+import type { OtaAdapter, OtaCheckResult, OtaDownloadResult, OtaRuntime } from '../ota/types';
 import { createMemoryStorage } from '../platform/memoryStorage';
 import { createNativePlatform } from '../platform/nativePlatform';
 import type {
@@ -70,6 +70,8 @@ export interface SimulationSetup {
 }
 
 const LATEST = { version: '3.4.0', androidBuild: 340, iosBuild: 1 };
+/** The OTA update a simulated download fetches; matches the newest simulated release. */
+const NEXT_UPDATE_ID = 'sim-update-2';
 
 function delay(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -177,14 +179,15 @@ export class SimulatedOta implements OtaAdapter {
     return { available: this.available };
   }
 
-  async download(): Promise<void> {
+  async download(): Promise<OtaDownloadResult> {
     await delay(this.downloadMs);
+    return { updateId: NEXT_UPDATE_ID };
   }
 
   /** Pretends the app restarted into the new update. */
   async apply(): Promise<void> {
     await delay(50);
-    this.updateId = 'sim-update-2';
+    this.updateId = NEXT_UPDATE_ID;
     this.available = false;
   }
 }

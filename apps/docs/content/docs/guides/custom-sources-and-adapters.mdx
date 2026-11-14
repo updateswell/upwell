@@ -66,7 +66,7 @@ interface OtaAdapter {
     isEmbedded?: boolean;
   };
   check(): Promise<{ available: boolean; disabled?: boolean; reason?: string }>;
-  download(): Promise<void>;
+  download(): Promise<void | { updateId?: string | null }>; // the downloaded update's id, if known
   apply(): Promise<void>;      // restart into the downloaded update
 }
 ```
@@ -89,7 +89,10 @@ export function myOtaAdapter(): OtaAdapter {
       const update = await Ota.checkForUpdate();
       return { available: update != null };
     },
-    download: () => Ota.downloadUpdate(),
+    async download() {
+      const bundle = await Ota.downloadUpdate();
+      return { updateId: bundle.id };
+    },
     apply: () => Ota.reload(),
   };
 }
@@ -100,6 +103,9 @@ Guidelines:
 - **`getRuntime()` is synchronous** and called on every check. Return what the running binary is
   compatible with. That's what [stranded detection](/docs/concepts/stranded-installs) compares against
   `latestRuntimeVersion`.
+- **Return the downloaded update's id from `download()`** if the tool tells you, so the
+  `ota_downloaded` and `ota_applied` [events](/docs/guides/analytics-events) can report it. Returning
+  nothing is fine too.
 - **Return `disabled: true`** where OTA is off (dev builds, not configured), so the trace says why.
 - **`apply()` usually never resolves**, because the JavaScript reloads. If it does resolve (tests,
   simulation), Upwell checks again.

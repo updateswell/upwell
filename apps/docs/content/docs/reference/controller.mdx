@@ -22,8 +22,8 @@ const upwell = createUpwell({ policy: 'https://cdn.example.com/upwell/policy.jso
   type={{
     policy: {
       type: 'PolicySource | string',
-      required: true,
-      description: 'Policy URL, or a source.',
+      description:
+        'Policy URL, or a source. Optional: without one, Upwell still applies OTA updates and recommends store updates that Google Play or the App Store report, but can\'t force updates or detect stranded installs.',
       typeDescriptionLink: '/docs/guides/custom-sources-and-adapters#policy-sources',
     },
     releases: {
@@ -74,6 +74,12 @@ const upwell = createUpwell({ policy: 'https://cdn.example.com/upwell/policy.jso
       description: 'Called on errors other than policy fetches.',
       typeDescriptionLink: '/docs/guides/debugging-and-analytics#error-contexts',
     },
+    onEvent: {
+      type: '(event: UpwellEvent) => void',
+      description:
+        'Called with every update event: checks, store prompts and what the user did with them, store flows, OTA downloads and restarts, errors. For your analytics; Upwell sends nothing itself. If it throws or rejects, the error goes to onError with context "onEvent" and updating carries on.',
+      typeDescriptionLink: '/docs/guides/analytics-events',
+    },
     now: {
       type: '() => number',
       default: 'Date.now',
@@ -81,6 +87,22 @@ const upwell = createUpwell({ policy: 'https://cdn.example.com/upwell/policy.jso
     },
   }}
 />
+
+### Events
+
+```ts
+const upwell = createUpwell({
+  policy: url,
+  onEvent: (event) => posthog.capture(`upwell_${event.type}`, event),
+});
+```
+
+The controller emits the events, so they're the same with the UI kit, your own UI, or no UI.
+`event.type` is one of `check`, `prompt_shown`, `prompt_action`, `store_flow`, `ota_downloaded`,
+`ota_applied`, `updated_seen` and `error`; every event also carries the app version, build,
+runtime, running update, install source, SDK version, timestamp and the random per-install
+`installationId`. See [Send update events to your analytics](/docs/guides/analytics-events) for
+when each one fires, and the [`UpwellEvent`](/docs/reference/types#upwellevent) type.
 
 ## Methods
 
@@ -91,8 +113,8 @@ const upwell = createUpwell({ policy: 'https://cdn.example.com/upwell/policy.jso
 | `startStoreUpdate(flow?)` | Starts a store flow (default: the decision's flow). Falls back to the store link if a Play flow fails |
 | `completeStoreUpdate()` | Installs a downloaded flexible update. The app restarts |
 | `applyOta()` | Restarts into the downloaded OTA update |
-| `dismiss()` | "Later" for the current decision |
-| `markUpdateSeen()` | Clears `justUpdated` |
+| `dismiss()` | "Later" for the current decision. Reported as a `prompt_action` event for store prompts |
+| `markUpdateSeen()` | Clears `justUpdated`. Reported as an `updated_seen` event |
 | `explain()` | `{ decision, trace }` for the current decision |
 | `handleAppStateChange(next)` | Call with `AppState` changes when you don't use the provider. `'active'` checks; `'background'` installs a postponed flexible update |
 | `simulate(scenario, options?)` | Jumps to a [simulated state](/docs/guides/testing-and-simulation). `null` returns to the real device |
@@ -110,7 +132,7 @@ const upwell = createUpwell({ policy: 'https://cdn.example.com/upwell/policy.jso
     dismissed: { type: 'boolean', description: 'The user dismissed the current decision this session.' },
     busy: { type: 'boolean', description: 'A store flow or an OTA restart is in progress.' },
     installed: { type: 'InstalledInfo | null', description: 'What the device reported.' },
-    policy: { type: 'Policy | null', description: 'The policy in use (fresh, or last known good).' },
+    policy: { type: 'Policy | null', description: 'The policy in use (fresh, or last known good). `null` when none is configured.' },
     policyError: { type: 'string | null', description: 'Why the latest fetch failed or was rejected.' },
     policyWarnings: { type: 'string[]', description: 'Validator warnings, e.g. unknown keys.' },
     store: { type: 'StoreInfo | null', description: 'Play or App Store info.' },
