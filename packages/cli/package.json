@@ -1,6 +1,6 @@
 {
   "name": "@upwell/cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Command line for Upwell: validate and edit policy.json and releases.json, explain decisions, and (soon) publish them without hosting anything",
   "type": "module",
   "bin": {
@@ -45,7 +45,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@upwell/core": "^0.2.1"
+    "@upwell/core": "^0.3.0"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
