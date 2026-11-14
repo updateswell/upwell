@@ -6,11 +6,17 @@ import {
   type IosPolicy,
   type OtaInfo,
   type Policy,
+  type PolicyOrigin,
+  type PromptAction,
+  type PromptDecisionKind,
   type PromptHistory,
   type Release,
   type ReleasesDocument,
   type StoreFlow,
   type StoreInfo,
+  type UpwellEvent,
+  type UpwellEventBase,
+  type UpwellEventFields,
   type ValidationResult,
   explain as runEngine,
   findRelease,
@@ -25,6 +31,7 @@ import { createNativePlatform } from './platform/nativePlatform';
 import type {
   BaseInstalledInfo,
   KeyValueStorage,
+  StoreFlowContext,
   StoreFlowResult,
   StoreProgress,
   UpwellPlatform,
@@ -36,6 +43,7 @@ import {
   type SimulationSetup,
 } from './simulation';
 import { type PolicySource, type ReleasesSource, type Source, toSource } from './sources';
+import { SDK_VERSION } from './version';
 
 export interface UpwellOptions {
   /**
@@ -63,6 +71,11 @@ export interface UpwellOptions {
   now?: () => number;
   onDecision?: (explanation: Explanation) => void;
   onError?: (error: unknown, context: string) => void;
+  /**
+   * Called with every update event (checks, prompts, store flows, OTA downloads and restarts,
+   * errors), for your analytics. Errors it throws go to `onError` with context `onEvent`.
+   */
+  onEvent?: (event: UpwellEvent) => void;
 }
 
 export interface UpwellState {
@@ -104,6 +117,12 @@ const INITIAL_DECISION: Decision = { kind: 'upToDate', because: 'not checked yet
 
 function message(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+type PromptDecision = Extract<Decision, { kind: PromptDecisionKind }>;
+
+function isPrompt(d: Decision): d is PromptDecision {
+  return d.kind === 'store.recommended' || d.kind === 'store.required';
 }
 
 function readJson<T>(storage: KeyValueStorage, key: string): T | null {
@@ -169,6 +188,10 @@ export class UpwellController {
   private shownThisSession: string | null = null;
   private dismissedKinds = new Set<Decision['kind']>();
   private otaDownload: Promise<void> | null = null;
+  /** Id of the OTA update downloaded this session, when the adapter reports one. */
+  private downloadedUpdateId: string | null = null;
+  /** `kind target` of each prompt reported this session. */
+  private promptsReported = new Set<string>();
   private disposed = false;
 
   constructor(options: UpwellOptions) {
@@ -228,6 +251,63 @@ export class UpwellController {
   private reportError(e: unknown, context: string) {
     this.options.onError?.(e, context);
     if (this.options.debug) console.warn(`[upwell] ${context}: ${message(e)}`);
+    this.emit({ type: 'error', context, message: message(e) });
+  }
+
+  // ── Events ───────────────────────────────────────────────────────────────
+
+  /** Sends an event to `onEvent`. Analytics must never break updating, so nothing it does escapes. */
+  private emit(fields: UpwellEventFields) {
+    const onEvent = this.options.onEvent;
+    if (!onEvent || this.disposed) return;
+    const failed = (e: unknown) => {
+      // Not reportError: an `error` event would go straight back to the failing handler.
+      try {
+        this.options.onError?.(e, 'onEvent');
+      } catch {}
+      if (this.options.debug) console.warn(`[upwell] onEvent: ${message(e)}`);
+    };
+    try {
+      const result: unknown = onEvent({ ...this.eventBase(), ...fields } as UpwellEvent);
+      if (result instanceof Promise) result.catch(failed);
+    } catch (e) {
+      failed(e);
+    }
+  }
+
+  private eventBase(): UpwellEventBase {
+    const base = this.baseInstalled;
+    const installed = base ? this.toInstalled(base) : null;
+    return {
+      timestamp: this.now(),
+      sdkVersion: SDK_VERSION,
+      platform: base?.platform ?? this.platform.os,
+      appVersion: installed?.nativeVersion ?? null,
+      build: installed?.buildNumber ?? null,
+      runtimeVersion: installed?.runtimeVersion ?? null,
+      updateId: installed?.otaUpdateId ?? null,
+      installSource: installed?.installSource ?? null,
+      installationId: installed?.installationId ?? null,
+      simulation: this.state.simulation,
+    };
+  }
+
+  private reportPromptShown(decision: Decision) {
+    if (!isPrompt(decision)) return;
+    const key = `${decision.kind} ${targetKey(decision.target)}`;
+    if (this.promptsReported.has(key)) return;
+    this.promptsReported.add(key);
+    this.emit({
+      type: 'prompt_shown',
+      decision: decision.kind,
+      reason: decision.reason,
+      flow: decision.flow,
+      target: decision.target,
+    });
+  }
+
+  private reportPromptAction(action: PromptAction, decision: PromptDecision) {
+    this.emit({ type: 'prompt_action', action, decision: decision.kind, target: decision.target });
   }
 
   // ── Checking ─────────────────────────────────────────────────────────────
@@ -250,6 +330,7 @@ export class UpwellController {
   }
 
   private async runCheck(): Promise<Decision> {
+    const startedAt = this.now();
     this.setState({ status: 'checking' });
     this.loadPrompts();
 
@@ -271,15 +352,12 @@ export class UpwellController {
         trace: [decision.because],
         lastCheckedAt: this.now(),
       });
+      this.reportCheck(decision, 'none', startedAt);
       return decision;
     }
 
     const runtime = this.ota?.getRuntime();
-    const installed: InstalledInfo = {
-      ...base,
-      runtimeVersion: runtime?.runtimeVersion || base.embeddedRuntimeVersion || null,
-      otaUpdateId: runtime?.updateId ?? null,
-    };
+    const installed = this.toInstalled(base, runtime);
 
     const sim = this.simulationSetup;
     const [policyResult, releasesResult] = await Promise.all([
@@ -325,10 +403,29 @@ export class UpwellController {
       justUpdated: this.detectJustUpdated(runtime?.updateId ?? null, currentRelease, releases),
       lastCheckedAt: this.now(),
     });
-    const decision = this.recompute();
+    const origin: PolicyOrigin = policy ? (policyResult.error ? 'cached' : 'fresh') : 'none';
+    const decision = this.recompute({ policy: origin, startedAt });
     this.setState({ status: 'ready' });
     this.maybeDownloadOta();
     return decision;
+  }
+
+  private toInstalled(base: BaseInstalledInfo, runtime = this.ota?.getRuntime()): InstalledInfo {
+    return {
+      ...base,
+      runtimeVersion: runtime?.runtimeVersion || base.embeddedRuntimeVersion || null,
+      otaUpdateId: runtime?.updateId ?? null,
+    };
+  }
+
+  private reportCheck(decision: Decision, policy: PolicyOrigin, startedAt: number) {
+    this.emit({
+      type: 'check',
+      decision: decision.kind,
+      reason: 'reason' in decision ? decision.reason : null,
+      policy,
+      durationMs: this.now() - startedAt,
+    });
   }
 
   private async fetchValidated<T>(
@@ -388,7 +485,9 @@ export class UpwellController {
     this.recompute();
     this.otaDownload = ota
       .download()
-      .then(() => {
+      .then((result) => {
+        this.downloadedUpdateId = result?.updateId ?? null;
+        this.emit({ type: 'ota_downloaded', newUpdateId: this.downloadedUpdateId });
         this.setState({ ota: { status: 'ready' } });
         const decision = this.recompute();
         if (decision.kind === 'ota.ready' && decision.applyMode === 'immediate') {
@@ -426,8 +525,11 @@ export class UpwellController {
     return lastSeen !== updateId ? current : null;
   }
 
-  /** Runs the engine on the latest inputs without touching the network. */
-  private recompute(): Decision {
+  /**
+   * Runs the engine on the latest inputs without touching the network. `check` is set when a
+   * check produced the inputs, to report it.
+   */
+  private recompute(check?: { policy: PolicyOrigin; startedAt: number }): Decision {
     const installed = this.state.installed;
     if (!installed) return this.state.decision;
     const explanation = runEngine({
@@ -459,6 +561,8 @@ export class UpwellController {
     this.setState({ decision, trace, dismissed: this.dismissedKinds.has(decision.kind) });
     if (this.options.debug) console.log(`[upwell]\n  ${trace.join('\n  ')}`);
     this.options.onDecision?.({ decision, trace });
+    if (check) this.reportCheck(decision, check.policy, check.startedAt);
+    this.reportPromptShown(decision);
     return decision;
   }
 
@@ -523,32 +627,36 @@ export class UpwellController {
       ios?.appStoreId ??
       (store?.kind === 'appStore' && store.trackId != null ? String(store.trackId) : null);
 
+    const ctx: StoreFlowContext = { storeUrl, appStoreId, installed };
+    let current = chosen;
+    const run = async (f: StoreFlow) => {
+      current = f;
+      const result = await this.platform.startStoreUpdate(f, ctx);
+      this.emit({ type: 'store_flow', flow: f, result });
+      return result;
+    };
+
+    if (isPrompt(d)) this.reportPromptAction('update', d);
     this.setState({ busy: true });
     try {
-      const result = await this.platform.startStoreUpdate(chosen, {
-        storeUrl,
-        appStoreId,
-        installed,
-      });
-      // Saying no to Play's own dialog counts as a dismissal (snooze), but never for required updates.
-      if (result === 'canceled' && d.kind === 'store.recommended') this.dismiss();
+      const result = await run(chosen);
+      if (result === 'canceled' && isPrompt(d)) {
+        this.reportPromptAction('dismiss', d);
+        // Saying no to Play's own dialog snoozes like "Later", but never for required updates.
+        if (d.kind === 'store.recommended') this.snooze(d);
+      }
       if (
         result === 'failed' &&
         (chosen === 'playFlexible' || chosen === 'playImmediate') &&
         storeUrl
       ) {
-        return await this.platform.startStoreUpdate('storeLink', {
-          storeUrl,
-          appStoreId,
-          installed,
-        });
+        return await run('storeLink');
       }
       return result;
     } catch (e) {
       this.reportError(e, 'starting the store update');
-      if (storeUrl && chosen !== 'storeLink') {
-        return this.platform.startStoreUpdate('storeLink', { storeUrl, appStoreId, installed });
-      }
+      this.emit({ type: 'store_flow', flow: current, result: 'failed' });
+      if (storeUrl && current !== 'storeLink') return run('storeLink');
       return 'failed';
     } finally {
       this.setState({ busy: false });
@@ -570,10 +678,19 @@ export class UpwellController {
   /** Restarts into the downloaded OTA update. */
   async applyOta(): Promise<void> {
     if (!this.ota) return;
+    const d = this.state.decision;
+    if (this.state.ota.status === 'ready') {
+      this.emit({
+        type: 'ota_applied',
+        newUpdateId: this.downloadedUpdateId,
+        applyMode: d.kind === 'ota.ready' ? d.applyMode : null,
+      });
+    }
     this.setState({ busy: true });
     try {
       await this.ota.apply();
       // Only reached when the tool didn't reload the JS (simulation, tests).
+      this.downloadedUpdateId = null;
       this.setState({ ota: { status: 'idle' } });
       await this.check({ force: true });
     } catch (e) {
@@ -590,25 +707,31 @@ export class UpwellController {
   dismiss(): void {
     const d = this.state.decision;
     if (d.kind === 'store.recommended') {
-      const now = this.now();
-      const key = targetKey(d.target);
-      this.prompts = { ...this.prompts, dismissedAt: now, dismissedTarget: key };
-      this.promptsSnapshot = { ...this.promptsSnapshot, dismissedAt: now, dismissedTarget: key };
-      this.savePrompts();
+      this.reportPromptAction('later', d);
+      this.snooze(d);
     } else if (
       d.kind === 'ota.ready' ||
       d.kind === 'store.readyToInstall' ||
       d.kind === 'ota.downloading'
     ) {
       this.dismissedKinds.add(d.kind);
-    } else {
-      return;
+      this.recompute();
     }
+  }
+
+  private snooze(d: Extract<Decision, { kind: 'store.recommended' }>) {
+    const now = this.now();
+    const key = targetKey(d.target);
+    this.prompts = { ...this.prompts, dismissedAt: now, dismissedTarget: key };
+    this.promptsSnapshot = { ...this.promptsSnapshot, dismissedAt: now, dismissedTarget: key };
+    this.savePrompts();
     this.recompute();
   }
 
   /** Clears `justUpdated` so the "Updated" sheet isn't shown again. */
   markUpdateSeen(): void {
+    const seen = this.state.justUpdated;
+    if (seen) this.emit({ type: 'updated_seen', releaseId: seen.id });
     const id = this.state.installed?.otaUpdateId;
     if (id) {
       try {
@@ -677,6 +800,8 @@ export class UpwellController {
     this.shownThisSession = null;
     this.dismissedKinds.clear();
     this.otaDownload = null;
+    this.downloadedUpdateId = null;
+    this.promptsReported.clear();
   }
 
   // ── Store progress ───────────────────────────────────────────────────────

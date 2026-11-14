@@ -1,6 +1,14 @@
-import type { DecisionKind, Policy, ReleasesDocument, StoreInfo } from '@upwell/core';
+import type {
+  DecisionKind,
+  Policy,
+  ReleasesDocument,
+  StoreInfo,
+  UpwellEvent,
+  UpwellEventType,
+} from '@upwell/core';
 
 import { policy as policyFixture } from '../../../core/src/__tests__/fixtures';
+import pkg from '../../package.json';
 import { UpwellController, type UpwellOptions } from '../controller';
 import type { OtaAdapter } from '../ota/types';
 import type { BaseInstalledInfo, KeyValueStorage } from '../platform/types';
@@ -533,6 +541,394 @@ describe('UpwellController', () => {
       const d = await c.simulate(null);
       expect(d.kind).toBe('store.recommended');
       expect(c.getState().simulation).toBeNull();
+    });
+  });
+});
+
+describe('events', () => {
+  function recorder() {
+    const events: UpwellEvent[] = [];
+    return {
+      events,
+      onEvent: (e: UpwellEvent) => {
+        events.push(e);
+      },
+      of<T extends UpwellEventType>(type: T) {
+        return events.filter((e): e is Extract<UpwellEvent, { type: T }> => e.type === type);
+      },
+    };
+  }
+
+  it('reports every completed check with the common fields', async () => {
+    const r = recorder();
+    const c = controller({ onEvent: r.onEvent, ota: new FakeOta(false, 'u-1') });
+    await c.check();
+    expect(r.of('check')).toEqual([
+      {
+        type: 'check',
+        decision: 'store.recommended',
+        reason: 'newerVersion',
+        policy: 'fresh',
+        durationMs: expect.any(Number),
+        timestamp: expect.any(Number),
+        sdkVersion: pkg.version,
+        platform: 'android',
+        appVersion: '3.3.0',
+        build: '330',
+        runtimeVersion: '3.3.0',
+        updateId: 'u-1',
+        installSource: 'play',
+        installationId: 'install-a',
+        simulation: null,
+      },
+    ]);
+  });
+
+  it('carries nothing personal: only the documented common fields', async () => {
+    const r = recorder();
+    const c = controller({
+      onEvent: r.onEvent,
+      platform: platform({ installed: { regionCode: 'DE', osVersion: '15' } }),
+    });
+    await c.check();
+    const { type, decision, reason, policy, durationMs, ...common } = r.of('check')[0]!;
+    expect(Object.keys(common).sort()).toEqual([
+      'appVersion',
+      'build',
+      'installSource',
+      'installationId',
+      'platform',
+      'runtimeVersion',
+      'sdkVersion',
+      'simulation',
+      'timestamp',
+      'updateId',
+    ]);
+  });
+
+  it('says where the policy came from', async () => {
+    const p = platform();
+    const r = recorder();
+    await controller({ platform: p, onEvent: r.onEvent }).check();
+    await controller({ platform: p, onEvent: r.onEvent, policy: failing() }).check();
+    await new UpwellController({ platform: p, onEvent: r.onEvent }).check();
+    expect(r.of('check').map((e) => e.policy)).toEqual(['fresh', 'cached', 'none']);
+  });
+
+  it('skips throttled checks', async () => {
+    const r = recorder();
+    const c = controller({ onEvent: r.onEvent });
+    await Promise.all([c.check(), c.check()]);
+    await c.check();
+    expect(r.of('check')).toHaveLength(1);
+    await c.check({ force: true });
+    expect(r.of('check')).toHaveLength(2);
+  });
+
+  it('reports a check that could not read the device, with what is known', async () => {
+    const r = recorder();
+    const c = new UpwellController({
+      policy: staticSource(policyFixture()),
+      platform: null,
+      onEvent: r.onEvent,
+    });
+    await c.check();
+    expect(r.of('error')[0]).toMatchObject({
+      context: 'reading installed info',
+      message: expect.stringContaining('native module is not linked'),
+      appVersion: null,
+      installationId: null,
+    });
+    expect(r.of('check')[0]).toMatchObject({ decision: 'error', policy: 'none' });
+  });
+
+  describe('prompt_shown', () => {
+    it('fires once per target per session, after the check', async () => {
+      const p = platform();
+      const r = recorder();
+      const c = controller({ platform: p, onEvent: r.onEvent });
+      await c.check();
+      await c.check({ force: true });
+      expect(r.of('prompt_shown')).toEqual([
+        expect.objectContaining({
+          type: 'prompt_shown',
+          decision: 'store.recommended',
+          reason: 'newerVersion',
+          flow: 'playFlexible',
+          target: { version: '3.4.0', build: '340' },
+          installationId: 'install-a',
+        }),
+      ]);
+      expect(r.events.map((e) => e.type)).toEqual(['check', 'prompt_shown', 'check']);
+      // A new session shows it again.
+      await controller({ platform: p, onEvent: r.onEvent }).check();
+      expect(r.of('prompt_shown')).toHaveLength(2);
+    });
+
+    it('fires for required updates', async () => {
+      const r = recorder();
+      const c = controller({
+        platform: platform({ installed: { buildNumber: '290' } }),
+        onEvent: r.onEvent,
+      });
+      await c.check();
+      expect(r.of('prompt_shown')).toEqual([
+        expect.objectContaining({ decision: 'store.required', reason: 'belowMinimum' }),
+      ]);
+    });
+
+    it('does not fire when nothing is shown', async () => {
+      const r = recorder();
+      const c = controller({ platform: platform({ store: null }), onEvent: r.onEvent });
+      // A snoozed recommendation isn't shown again.
+      await c.check();
+      c.dismiss();
+      await c.check({ force: true });
+      expect(r.of('prompt_shown')).toHaveLength(1);
+      expect(c.getState().decision.kind).toBe('upToDate');
+    });
+  });
+
+  describe('prompt_action and store_flow', () => {
+    it('"Later" is a later action', async () => {
+      const r = recorder();
+      const c = controller({ onEvent: r.onEvent });
+      await c.check();
+      c.dismiss();
+      expect(r.of('prompt_action')).toEqual([
+        expect.objectContaining({
+          action: 'later',
+          decision: 'store.recommended',
+          target: { version: '3.4.0', build: '340' },
+        }),
+      ]);
+    });
+
+    it('starting the update is an update action, then the flow result', async () => {
+      const r = recorder();
+      const c = controller({ onEvent: r.onEvent });
+      await c.check();
+      await c.startUpdate();
+      expect(r.of('prompt_action')).toEqual([
+        expect.objectContaining({ action: 'update', decision: 'store.recommended' }),
+      ]);
+      expect(r.of('store_flow')).toEqual([
+        expect.objectContaining({ flow: 'playFlexible', result: 'accepted' }),
+      ]);
+      const types = r.events.map((e) => e.type);
+      expect(types.indexOf('prompt_action')).toBeLessThan(types.indexOf('store_flow'));
+    });
+
+    it("declining Play's dialog is a dismiss action, not later", async () => {
+      const r = recorder();
+      const c = controller({ platform: platform({ userAccepts: false }), onEvent: r.onEvent });
+      await c.check();
+      await c.startUpdate();
+      expect(r.of('prompt_action').map((e) => e.action)).toEqual(['update', 'dismiss']);
+      expect(r.of('store_flow')).toEqual([expect.objectContaining({ result: 'canceled' })]);
+    });
+
+    it('reports each flow when a Play flow falls back to the store link', async () => {
+      const p = platform();
+      jest
+        .spyOn(p, 'startStoreUpdate')
+        .mockResolvedValueOnce('failed')
+        .mockResolvedValueOnce('opened');
+      const r = recorder();
+      const c = controller({ platform: p, onEvent: r.onEvent });
+      await c.check();
+      await c.startUpdate();
+      expect(r.of('store_flow').map((e) => [e.flow, e.result])).toEqual([
+        ['playFlexible', 'failed'],
+        ['storeLink', 'opened'],
+      ]);
+    });
+
+    it('reports a Play flow that throws as failed, then the fallback', async () => {
+      const p = platform();
+      jest
+        .spyOn(p, 'startStoreUpdate')
+        .mockRejectedValueOnce(new Error('Play unavailable'))
+        .mockResolvedValueOnce('opened');
+      const r = recorder();
+      const c = controller({ platform: p, onEvent: r.onEvent });
+      await c.check();
+      expect(await c.startUpdate()).toBe('opened');
+      expect(r.of('store_flow').map((e) => [e.flow, e.result])).toEqual([
+        ['playFlexible', 'failed'],
+        ['storeLink', 'opened'],
+      ]);
+      expect(r.of('error')).toEqual([
+        expect.objectContaining({ context: 'starting the store update' }),
+      ]);
+    });
+
+    it('opening the store without a prompt is a flow, not a prompt action', async () => {
+      const r = recorder();
+      const c = controller({ platform: platform({ store: null }), onEvent: r.onEvent });
+      await c.check();
+      c.dismiss();
+      await c.startStoreUpdate('storeLink');
+      expect(r.of('prompt_action').map((e) => e.action)).toEqual(['later']);
+      expect(r.of('store_flow')).toEqual([
+        expect.objectContaining({ flow: 'storeLink', result: 'opened' }),
+      ]);
+    });
+  });
+
+  describe('OTA', () => {
+    it('reports the download and the restart, with the new update id', async () => {
+      const r = recorder();
+      const c = controller({ onEvent: r.onEvent });
+      await c.simulate('ota.ready', { stepMs: 1 });
+      await waitFor(() => c.getState().decision.kind === 'ota.ready');
+      expect(r.of('ota_downloaded')).toEqual([
+        expect.objectContaining({
+          newUpdateId: 'sim-update-2',
+          updateId: 'sim-update-1',
+          simulation: 'ota.ready',
+        }),
+      ]);
+      await c.applyOta();
+      expect(r.of('ota_applied')).toEqual([
+        expect.objectContaining({
+          newUpdateId: 'sim-update-2',
+          applyMode: 'prompt',
+          updateId: 'sim-update-1',
+        }),
+      ]);
+      // The check after the restart runs on the new update.
+      expect(r.of('check').at(-1)).toMatchObject({ updateId: 'sim-update-2' });
+      c.dispose();
+    });
+
+    it('reports immediate restarts', async () => {
+      const r = recorder();
+      const ota = new FakeOta(true);
+      const p = policyFixture({
+        android: { ota: { latestRuntimeVersion: '3.3.0', applyMode: 'immediate' } },
+      });
+      controller({ ota, policy: staticSource(p), onEvent: r.onEvent }).check();
+      await waitFor(() => ota.applied === 1);
+      expect(r.of('ota_downloaded')).toEqual([expect.objectContaining({ newUpdateId: null })]);
+      expect(r.of('ota_applied')).toEqual([
+        expect.objectContaining({ applyMode: 'immediate', newUpdateId: null }),
+      ]);
+    });
+
+    it('reports a failed download as an error, not a download', async () => {
+      const r = recorder();
+      const ota = new FakeOta(true);
+      ota.download = async () => {
+        throw new Error('disk full');
+      };
+      const c = controller({ ota, onEvent: r.onEvent });
+      await c.check();
+      await waitFor(() => c.getState().ota.status === 'error');
+      expect(r.of('ota_downloaded')).toEqual([]);
+      expect(r.of('error')).toEqual([
+        expect.objectContaining({ context: 'downloading the OTA update', message: 'disk full' }),
+      ]);
+    });
+  });
+
+  describe('updated_seen', () => {
+    const releases: ReleasesDocument = {
+      schemaVersion: 1,
+      releases: [
+        {
+          id: 'u-2',
+          platforms: ['android'],
+          runtimeVersion: '3.3.0',
+          kind: 'fix',
+          notes: 'Fixed login',
+          publishedAt: '2026-10-21T00:00:00Z',
+        },
+      ],
+    };
+
+    it('fires when the "Updated" sheet is marked seen', async () => {
+      const p = platform();
+      p.storage.set('lastSeenUpdateId', 'u-1');
+      const r = recorder();
+      const c = controller({
+        platform: p,
+        ota: new FakeOta(false, 'u-2'),
+        releases: staticSource(releases),
+        onEvent: r.onEvent,
+      });
+      await c.check();
+      c.markUpdateSeen();
+      c.markUpdateSeen();
+      expect(r.of('updated_seen')).toEqual([
+        expect.objectContaining({ releaseId: 'u-2', updateId: 'u-2' }),
+      ]);
+    });
+
+    it('does not fire when there was nothing to announce', async () => {
+      const r = recorder();
+      const c = controller({ ota: new FakeOta(false, 'u-1'), onEvent: r.onEvent });
+      await c.check();
+      c.markUpdateSeen();
+      expect(r.of('updated_seen')).toEqual([]);
+    });
+  });
+
+  it('reports errors passed to onError', async () => {
+    const r = recorder();
+    const onError = jest.fn();
+    const c = controller({
+      onEvent: r.onEvent,
+      onError,
+      releases: failing('releases offline') as unknown as Source<ReleasesDocument>,
+    });
+    await c.check();
+    expect(onError).toHaveBeenCalledWith(expect.any(Error), 'loading releases');
+    expect(r.of('error')).toEqual([
+      expect.objectContaining({ context: 'loading releases', message: 'releases offline' }),
+    ]);
+  });
+
+  describe('a broken onEvent', () => {
+    it('never breaks the update flow', async () => {
+      const onError = jest.fn();
+      const c = controller({
+        onEvent: () => {
+          throw new Error('analytics down');
+        },
+        onError,
+      });
+      expect((await c.check()).kind).toBe('store.recommended');
+      expect(await c.startUpdate()).toBe('accepted');
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'analytics down' }),
+        'onEvent'
+      );
+    });
+
+    it('catches rejected promises from async handlers', async () => {
+      const onError = jest.fn();
+      const c = controller({
+        onEvent: async () => {
+          throw new Error('analytics down');
+        },
+        onError,
+      });
+      await c.check();
+      await flush();
+      expect(onError).toHaveBeenCalledWith(expect.any(Error), 'onEvent');
+    });
+
+    it('survives a throwing onError too', async () => {
+      const c = controller({
+        onEvent: () => {
+          throw new Error('analytics down');
+        },
+        onError: () => {
+          throw new Error('logging down');
+        },
+      });
+      expect((await c.check()).kind).toBe('store.recommended');
     });
   });
 });

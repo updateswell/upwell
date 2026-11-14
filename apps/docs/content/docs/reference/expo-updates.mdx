@@ -30,7 +30,7 @@ Requires `expo-updates` (and uses `expo-constants`, which Expo apps already have
 | --- | --- |
 | `getRuntime()` | `Updates.runtimeVersion`, falling back to the `runtimeVersion` in your app config (debug builds report an empty runtime). `Updates.updateId`, the EAS update group id from the manifest, and `Updates.isEmbeddedLaunch` |
 | `check()` | `Updates.checkForUpdateAsync()`. Reports `disabled` when `Updates.isEnabled` is false, or in development unless `checkInDev` is set |
-| `download()` | `Updates.fetchUpdateAsync()` |
+| `download()` | `Updates.fetchUpdateAsync()`, returning the fetched manifest's id for the `ota_downloaded` event |
 | `apply()` | `Updates.reloadAsync()` |
 
 ### Matching releases.json

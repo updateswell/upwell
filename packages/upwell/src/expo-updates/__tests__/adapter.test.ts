@@ -58,15 +58,22 @@ describe('expoUpdatesAdapter()', () => {
 
   it('checks, downloads and reloads through expo-updates', async () => {
     const checkForUpdateAsync = jest.fn(async () => ({ isAvailable: true }));
-    const fetchUpdateAsync = jest.fn(async () => ({ isNew: true }));
+    const fetchUpdateAsync = jest.fn(async () => ({ isNew: true, manifest: { id: 'next' } }));
     const reloadAsync = jest.fn(async () => {});
     Object.assign(updates, { isEnabled: true, checkForUpdateAsync, fetchUpdateAsync, reloadAsync });
     const adapter = expoUpdatesAdapter({ checkInDev: true });
     await expect(adapter.check()).resolves.toEqual({ available: true });
-    await adapter.download();
+    await expect(adapter.download()).resolves.toEqual({ updateId: 'next' });
     await adapter.apply();
     expect(fetchUpdateAsync).toHaveBeenCalled();
     expect(reloadAsync).toHaveBeenCalled();
+  });
+
+  it('reports no update id for a roll back to the embedded update', async () => {
+    Object.assign(updates, {
+      fetchUpdateAsync: jest.fn(async () => ({ isNew: false, isRollBackToEmbedded: true })),
+    });
+    await expect(expoUpdatesAdapter().download()).resolves.toEqual({ updateId: null });
   });
 
   it('skips checks in development unless asked', async () => {

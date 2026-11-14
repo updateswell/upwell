@@ -14,12 +14,17 @@ export interface OtaCheckResult {
   reason?: string;
 }
 
+export interface OtaDownloadResult {
+  /** Id of the downloaded update, reported in the `ota_downloaded` and `ota_applied` events. */
+  updateId?: string | null;
+}
+
 /** Bridges an OTA tool (expo-updates, …) to Upwell. */
 export interface OtaAdapter {
   readonly name: string;
   getRuntime(): OtaRuntime;
   check(): Promise<OtaCheckResult>;
-  download(): Promise<void>;
+  download(): Promise<void | OtaDownloadResult>;
   /** Restarts into the downloaded update. Usually never resolves on a real device. */
   apply(): Promise<void>;
 }
