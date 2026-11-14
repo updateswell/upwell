@@ -20,9 +20,10 @@ import {
   useUpwellTheme,
 } from 'upwell/ui';
 
-type Preset = 'current' | 'newer' | 'stranded' | 'strandedLong' | 'required';
+type Preset = 'none' | 'current' | 'newer' | 'stranded' | 'strandedLong' | 'required';
 
 const PRESETS: { id: Preset; label: string }[] = [
+  { id: 'none', label: 'No policy' },
   { id: 'current', label: 'Up to date' },
   { id: 'newer', label: 'Newer in store' },
   { id: 'stranded', label: 'Stranded' },
@@ -128,7 +129,8 @@ const releases: ReleasesDocument = {
 
 export default function App() {
   const [preset, setPreset] = useState<Preset>('stranded');
-  const policy = useMemo(() => presetPolicy(preset), [preset]);
+  // "No policy": Upwell runs on store and OTA information alone.
+  const policy = useMemo(() => (preset === 'none' ? undefined : presetPolicy(preset)), [preset]);
   return (
     <UpwellThemeProvider>
       {/* Re-mount the provider when the preset changes so it starts a fresh session. */}

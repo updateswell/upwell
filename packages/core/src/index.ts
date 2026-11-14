@@ -1,4 +1,5 @@
 export * from './types';
+export * from './events';
 export { compareVersions, isComparableVersion } from './version';
 export { fnv1a, rolloutBucket, isInRollout } from './rollout';
 export { validatePolicy, validateReleases, type ValidationResult } from './validate';

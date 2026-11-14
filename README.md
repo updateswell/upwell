@@ -7,7 +7,8 @@
 
 **No user left on an old build.** Upwell decides, on every launch and foreground, what kind
 of update a React Native / Expo user needs (OTA, flexible or required store update, stranded
-runtime) and drives it end to end, from a remote policy.
+runtime) and drives it end to end. It works with no configuration; a small remote policy adds
+forced updates and stranded-install detection.
 
 ```sh
 npx expo install upwell

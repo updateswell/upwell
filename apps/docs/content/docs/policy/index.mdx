@@ -7,6 +7,15 @@ icon: FileBraces
 The policy is a JSON file you host. Upwell fetches it on every check, validates it, and caches the
 last valid copy. Change it and you change how every installed app behaves, with no new release.
 
+The policy is optional. Without one, Upwell still applies OTA updates and recommends store updates
+that Google Play or the App Store report. You need it for:
+
+- **Forced updates:** `minimum`, and escalation with `requireAfterDays`.
+- **Stranded installs:** `ota.latestRuntimeVersion`. Only you know which runtime your newest OTA
+  updates target.
+- **Your own wording and rollout:** `message`, `rollout`, `recommendAfterDays`.
+- **Exact timing on iOS:** the App Store lookup can lag a release by hours; `latest` doesn't.
+
 ```json title="policy.json"
 {
   "$schema": "https://upwell.run/schemas/policy.schema.json",

@@ -1,11 +1,11 @@
 import Ajv from 'ajv';
 
+import { policy } from './fixtures';
 import examplePolicy from '../../../../docs/examples/policy.json';
 import exampleReleases from '../../../../docs/examples/releases.json';
 import policySchema from '../../schemas/policy.schema.json';
 import releasesSchema from '../../schemas/releases.schema.json';
 import { validatePolicy, validateReleases } from '../validate';
-import { policy } from './fixtures';
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 const schemaPolicy = ajv.compile(policySchema);

@@ -1,6 +1,6 @@
 ---
 title: Debugging and analytics
-description: Find out why Upwell decided what it did, and log decisions to your own analytics.
+description: Find out why Upwell decided what it did, and send update events to your own analytics.
 icon: Bug
 ---
 
@@ -55,37 +55,22 @@ With `debug`, every decision's trace is logged with `console.log`, and errors wi
 
 ## Analytics
 
-`onDecision` is called every time the engine runs, with the decision and its trace:
+`onEvent` gets typed events for everything that matters to your metrics: checks, store prompts and
+what the user did with them, store flows, OTA downloads and restarts, and errors. See
+[Send update events to your analytics](/docs/guides/analytics-events) for the event list, PostHog and
+Firebase Analytics examples, and the dashboards worth building.
 
 ```tsx
 <UpwellProvider
   policy={url}
-  onDecision={({ decision }) => {
-    if (decision.kind === 'store.recommended' || decision.kind === 'store.required') {
-      analytics.track('update_prompt', {
-        kind: decision.kind,
-        reason: decision.reason,
-        flow: decision.flow,
-        target: decision.target.build,
-      });
-    }
-  }}
+  onEvent={(event) => analytics.track(`upwell_${event.type}`, event)}
   onError={(error, context) => Sentry.captureException(error, { tags: { upwell: context } })}
 />
 ```
 
-`onDecision` can fire several times per check (for example, on every progress update), so dedupe
-by `kind` if you count events. To track what users *do*, wrap the actions:
-
-```tsx
-const { startUpdate, dismiss } = useAppUpdate();
-
-const onUpdate = async () => {
-  analytics.track('update_accepted');
-  const result = await startUpdate(); // 'accepted' | 'canceled' | 'opened' | …
-  analytics.track('update_flow_result', { result });
-};
-```
+`onDecision` is lower level: it's called every time the engine runs (several times per check, for
+example on every download progress update), with the decision and its trace. Use it to log traces,
+not to count events.
 
 ### Error contexts
 
@@ -99,6 +84,7 @@ const onUpdate = async () => {
 | `checking for OTA updates`, `downloading the OTA update`, `applying the OTA update` | The OTA tool failed |
 | `starting the store update`, `installing the store update` | A store flow failed |
 | `caching`, `saving prompt history`, `reading update history`, `saving update history` | Device storage failed |
+| `onEvent` | Your `onEvent` handler threw or rejected. Not reported as an `error` event |
 
 Policy fetch errors don't go through `onError`. They're expected (offline users) and handled with the
 last known good copy. Read them from `state.policyError`.
