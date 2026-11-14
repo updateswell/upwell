@@ -143,6 +143,19 @@ describe('<UpwellProvider> + hooks', () => {
     await until(() => result.current.decision.kind === 'store.recommended');
   });
 
+  it('works without a policy', async () => {
+    const platform = new SimulatedPlatform(
+      'android',
+      { installed: installed(), store: { ...play } },
+      1,
+      true
+    );
+    const { result } = await renderHook(() => useAppUpdate(), {
+      wrapper: ({ children }) => <UpwellProvider platform={platform}>{children}</UpwellProvider>,
+    });
+    await until(() => result.current.decision.kind === 'store.recommended');
+  });
+
   it('useUpdateHistory() lists the runtime history', async () => {
     const controller = setup({ ota: ota('u-1') });
     const { result } = await renderHook(() => useUpdateHistory(), {
