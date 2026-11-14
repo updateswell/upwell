@@ -4,8 +4,11 @@ import type {
   PlayInstallStatus,
   Platform as PlatformName,
   StoreFlow,
+  StoreFlowResult,
   StoreInfo,
 } from '@upwell/core';
+
+export type { StoreFlowResult };
 
 /** Synchronous key-value storage (SharedPreferences / UserDefaults). */
 export interface KeyValueStorage {
@@ -22,9 +25,6 @@ export type BaseInstalledInfo = Omit<InstalledInfo, 'runtimeVersion' | 'otaUpdat
    */
   embeddedRuntimeVersion?: string | null;
 };
-
-export type StoreFlowResult =
-  'accepted' | 'canceled' | 'failed' | 'notStarted' | 'dismissed' | 'opened';
 
 export interface StoreFlowContext {
   storeUrl: string | null;

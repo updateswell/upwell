@@ -1,5 +1,5 @@
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react-native';
-import type { ReleasesDocument, StoreInfo } from '@upwell/core';
+import type { ReleasesDocument, StoreInfo, UpwellEvent } from '@upwell/core';
 import { Text } from 'react-native';
 
 import { policy } from '../../../../core/src/__tests__/fixtures';
@@ -143,6 +143,19 @@ describe('<UpwellProvider> + hooks', () => {
     await until(() => result.current.decision.kind === 'store.recommended');
   });
 
+  it('works without a policy', async () => {
+    const platform = new SimulatedPlatform(
+      'android',
+      { installed: installed(), store: { ...play } },
+      1,
+      true
+    );
+    const { result } = await renderHook(() => useAppUpdate(), {
+      wrapper: ({ children }) => <UpwellProvider platform={platform}>{children}</UpwellProvider>,
+    });
+    await until(() => result.current.decision.kind === 'store.recommended');
+  });
+
   it('useUpdateHistory() lists the runtime history', async () => {
     const controller = setup({ ota: ota('u-1') });
     const { result } = await renderHook(() => useUpdateHistory(), {
@@ -176,6 +189,29 @@ describe('UI kit', () => {
     await settle();
     expect(screen.queryByTestId('upwell-update-prompt')).toBeNull();
     expect(controller.getState().decision.kind).toBe('upToDate');
+  });
+
+  it('reports what the user does through onEvent on the provider', async () => {
+    const events: UpwellEvent[] = [];
+    const platform = new SimulatedPlatform(
+      'android',
+      { installed: installed(), store: { ...play } },
+      1,
+      true
+    );
+    await render(
+      <UpwellProvider
+        policy={staticSource(policy())}
+        platform={platform}
+        onEvent={(e) => events.push(e)}>
+        <UpwellUI />
+      </UpwellProvider>
+    );
+    await until(() => !!screen.queryByTestId('upwell-update-prompt'));
+    await fireEvent.press(screen.getByTestId('upwell-prompt-later'));
+    await settle();
+    expect(events.map((e) => e.type)).toEqual(['check', 'prompt_shown', 'prompt_action']);
+    expect(events[2]).toMatchObject({ action: 'later', decision: 'store.recommended' });
   });
 
   it('prompt → Update → progress banner → restart snackbar → installed', async () => {

@@ -14,18 +14,18 @@ session.
 
 ## Order
 
-| #   | Plan                                                                                                                            | Repo                 | Depends on | Status                                          |
-| --- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---------- | ----------------------------------------------- |
-| 00  | [Architecture and decisions](00-architecture.md)                                                                                | both                 | —          | Read first                                      |
-| 01  | [Restructure `upwell` into a workspace](01-workspace-restructure.md)                                                            | `upwell`             | —          | Done                                            |
-| 02  | [`@upwell/core`](02-core-package.md)                                                                                            | `upwell`             | 01         | Done                                            |
-| 03  | [`platform` repo and the landing page](https://github.com/updateswell/platform/blob/main/docs/plans/03-platform-and-landing.md) | `platform`           | 01         | Done                                            |
-| 04  | [API: hosting on Cloudflare](https://github.com/updateswell/platform/blob/main/docs/plans/04-api.md)                            | `platform`           | 02, 03     | Parked                                          |
+| #   | Plan                                                                                                                            | Repo                 | Depends on | Status      |
+| --- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---------- | ----------- |
+| 00  | [Architecture and decisions](00-architecture.md)                                                                                | both                 | —          | Read first  |
+| 01  | [Restructure `upwell` into a workspace](01-workspace-restructure.md)                                                            | `upwell`             | —          | Done        |
+| 02  | [`@upwell/core`](02-core-package.md)                                                                                            | `upwell`             | 01         | Done        |
+| 03  | [`platform` repo and the landing page](https://github.com/updateswell/platform/blob/main/docs/plans/03-platform-and-landing.md) | `platform`           | 01         | Done        |
+| 04  | [API: hosting on Cloudflare](https://github.com/updateswell/platform/blob/main/docs/plans/04-api.md)                            | `platform`           | 02, 03     | Parked      |
 | 05  | [CLI](05-cli.md)                                                                                                                | `upwell`             | 02         | Sessions done; npm bootstrap and real runs left |
-| 06  | [SDK without hosting](06-sdk-without-hosting.md)                                                                                | `upwell`             | —          | Not started                                     |
-| 07  | [Analytics](https://github.com/updateswell/platform/blob/main/docs/plans/07-analytics.md)                                       | `platform`, `upwell` | 04, 06     | Parked                                          |
-| 08  | [Accounts and auth](https://github.com/updateswell/platform/blob/main/docs/plans/08-accounts-and-auth.md)                       | `platform`           | 04         | Parked                                          |
-| 09  | [Dashboard](https://github.com/updateswell/platform/blob/main/docs/plans/09-dashboard.md)                                       | `platform`           | 07, 08     | Parked                                          |
+| 06  | [SDK without hosting](06-sdk-without-hosting.md)                                                                                | `upwell`             | —          | In progress |
+| 07  | [Analytics](https://github.com/updateswell/platform/blob/main/docs/plans/07-analytics.md)                                       | `platform`, `upwell` | 04, 06     | Parked      |
+| 08  | [Accounts and auth](https://github.com/updateswell/platform/blob/main/docs/plans/08-accounts-and-auth.md)                       | `platform`           | 04         | Parked      |
+| 09  | [Dashboard](https://github.com/updateswell/platform/blob/main/docs/plans/09-dashboard.md)                                       | `platform`           | 07, 08     | Parked      |
 
 Next: **06 session 1** (zero-policy mode, small), then **05** (CLI, sessions 1–3), then the rest
 of 06. The goal: a developer runs `npx @upwell/cli init` and `npx @upwell/cli publish` and has a

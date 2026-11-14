@@ -23,7 +23,8 @@ Owns an [`UpwellController`](/docs/reference/controller) and runs the launch and
 </UpwellProvider>
 ```
 
-It accepts every [`UpwellOptions`](/docs/reference/controller#upwelloptions) field, plus:
+It accepts every [`UpwellOptions`](/docs/reference/controller#upwelloptions) field, including
+`onDecision`, `onError` and [`onEvent`](/docs/guides/analytics-events), plus:
 
 <TypeTable
   type={{
@@ -47,8 +48,26 @@ It accepts every [`UpwellOptions`](/docs/reference/controller#upwelloptions) fie
 
 <Callout>
   Options are read **once**, when the provider mounts. To change them later, create a controller
-  with `createUpwell()` and pass it as `controller`.
+  with `createUpwell()` and pass it as `controller`. The same goes for callbacks: an inline
+  `onEvent` keeps the values it closed over on the first render, so call module-level clients
+  (`posthog.capture`) or read the latest values through a ref.
 </Callout>
+
+### Sending events to your analytics
+
+```tsx
+<UpwellProvider
+  ota={expoUpdatesAdapter()}
+  onEvent={(event) => {
+    if (!event.simulation) posthog.capture(`upwell_${event.type}`, event);
+  }}
+>
+  <App />
+</UpwellProvider>
+```
+
+`onEvent` works the same with or without the UI kit; `useAppUpdate()` doesn't change. See
+[Send update events to your analytics](/docs/guides/analytics-events).
 
 ## useAppUpdate
 

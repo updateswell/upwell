@@ -1,19 +1,82 @@
 ---
 title: Quick start
-description: Publish a policy, wrap your app, and let Upwell handle the update flows.
+description: Wrap your app, see every update flow, then add a policy for forced updates and stranded installs.
 icon: Rocket
 ---
 
-This guide gets you from zero to working store and OTA prompts. It assumes you've
+This guide gets you from zero to working store and OTA prompts, first with no configuration, then with a policy. It assumes you've
 [installed Upwell](/docs/installation) and rebuilt your app.
 
 <Steps>
 <Step>
 
-### Publish a policy
+### Wrap your app
 
-Create a `policy.json` and host it anywhere that serves static files: a CDN, S3, GitHub Pages, or
-your own API. Upwell fetches it on launch and on foreground.
+Put `UpwellProvider` near the root of your app and render `UpwellUI` once, as its last child:
+
+```tsx title="App.tsx"
+import { UpwellProvider } from 'upwell/react';
+import { expoUpdatesAdapter } from 'upwell/expo-updates';
+import { UpwellUI } from 'upwell/ui';
+
+export default function App() {
+  return (
+    <UpwellProvider ota={expoUpdatesAdapter()}>
+      <RootNavigator />
+      <UpwellUI />
+    </UpwellProvider>
+  );
+}
+```
+
+That's a working setup. Upwell checks when the provider mounts and every time the app comes back to
+the foreground (at most once a minute). It downloads OTA updates in the background, and when Google
+Play or the App Store has a newer version, it offers the update. `<UpwellUI />` renders whatever the
+current decision calls for:
+
+| Decision | UI |
+| --- | --- |
+| `store.recommended` | `UpdatePrompt`: "Update" / "Later" |
+| `store.downloading` | `DownloadProgressBanner` |
+| `store.readyToInstall`, `ota.ready` (prompt mode) | `RestartSnackbar` |
+| `store.required` | `ForceUpdateScreen`, which can't be dismissed |
+| An OTA update was just applied | `UpdatedSheet`, if you publish `releases.json` |
+
+</Step>
+<Step>
+
+### Try every state
+
+You don't need to publish a store build to see the flows. Add the dev menu to a debug screen and
+tap through the scenarios:
+
+```tsx title="DebugScreen.tsx"
+import { UpwellDevMenu } from 'upwell/ui';
+
+export function DebugScreen() {
+  return <UpwellDevMenu style={{ flex: 1 }} />;
+}
+```
+
+On Android, the "recommended" and "required" scenarios run Play's `FakeAppUpdateManager` inside the
+native module, so the real Kotlin code path runs. See [Testing and simulation](/docs/guides/testing-and-simulation).
+
+</Step>
+<Step>
+
+### Add a policy
+
+The stores can tell an install that a newer version exists. They can't tell it that it **must**
+update, or that it's stranded on a runtime your OTA updates no longer target. That takes a policy:
+a small JSON file you host on [anything that serves HTTPS](/docs/policy/hosting).
+
+| | No policy | With a policy |
+| --- | --- | --- |
+| OTA updates (download, apply) | ✓ | ✓ |
+| Recommend newer store versions | ✓ (when the store reports them) | ✓, also from `latest` |
+| Forced updates (`minimum`) | — | ✓ |
+| Stranded installs | — | ✓ |
+| Your own messages and staged rollout | — | ✓ |
 
 The quickest way needs no hosting at all: `npx @upwell/cli init` writes a policy for your current
 version, and `npx @upwell/cli publish` puts it in a public GitHub gist and prints the URL. See
@@ -50,62 +113,14 @@ The policy says:
   14 days after `3.4.0` shipped.
 
 The `$schema` line gives you autocomplete and validation in your editor. Every field is described in
-the [policy reference](/docs/policy).
-
-</Step>
-<Step>
-
-### Wrap your app
-
-Put `UpwellProvider` near the root of your app and render `UpwellUI` once, as its last child:
+the [policy reference](/docs/policy). Then pass its URL to the provider:
 
 ```tsx title="App.tsx"
-import { UpwellProvider } from 'upwell/react';
-import { expoUpdatesAdapter } from 'upwell/expo-updates';
-import { UpwellUI } from 'upwell/ui';
-
-export default function App() {
-  return (
-    <UpwellProvider
-      policy="https://example.com/upwell/policy.json"
-      ota={expoUpdatesAdapter()}
-    >
-      <RootNavigator />
-      <UpwellUI />
-    </UpwellProvider>
-  );
-}
+<UpwellProvider
+  policy="https://example.com/upwell/policy.json"
+  ota={expoUpdatesAdapter()}
+>
 ```
-
-That's all the code you need. Upwell checks when the provider mounts and every time the app comes back to
-the foreground (at most once a minute). `<UpwellUI />` renders whatever the current decision calls for:
-
-| Decision | UI |
-| --- | --- |
-| `store.recommended` | `UpdatePrompt`: "Update" / "Later" |
-| `store.downloading` | `DownloadProgressBanner` |
-| `store.readyToInstall`, `ota.ready` (prompt mode) | `RestartSnackbar` |
-| `store.required` | `ForceUpdateScreen`, which can't be dismissed |
-| An OTA update was just applied | `UpdatedSheet`, if you publish `releases.json` |
-
-</Step>
-<Step>
-
-### Try every state
-
-You don't need to publish a store build to see the flows. Add the dev menu to a debug screen and
-tap through the scenarios:
-
-```tsx title="DebugScreen.tsx"
-import { UpwellDevMenu } from 'upwell/ui';
-
-export function DebugScreen() {
-  return <UpwellDevMenu style={{ flex: 1 }} />;
-}
-```
-
-On Android, the "recommended" and "required" scenarios run Play's `FakeAppUpdateManager` inside the
-native module, so the real Kotlin code path runs. See [Testing and simulation](/docs/guides/testing-and-simulation).
 
 </Step>
 <Step>
